@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: phase-3-templates
     content: "Phase 3: Template data model, picker UI, variable substitution, 3-5 templates"
-    status: pending
+    status: completed
   - id: phase-4-auth-billing
     content: "Phase 4: Clerk auth, project CRUD, usage tracking, Stripe billing, share links"
     status: pending

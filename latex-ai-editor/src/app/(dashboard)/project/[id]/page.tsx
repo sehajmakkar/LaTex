@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { use } from "react";
 import {
   ResizableHandle,
@@ -14,6 +14,8 @@ import { useEditorStore } from "@/stores/editor-store";
 import { DEFAULT_LATEX_CONTENT } from "@/lib/constants";
 import { toast } from "sonner";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type ProjectPageProps = {
   params: Promise<{ id: string }>;
 };
@@ -21,7 +23,31 @@ type ProjectPageProps = {
 export default function ProjectPage({ params }: ProjectPageProps) {
   const { id } = use(params);
   const [content, setContent] = useState(DEFAULT_LATEX_CONTENT);
+  const [projectName, setProjectName] = useState(id === "new" ? "Untitled Project" : "Loading...");
+  const [projectLoaded, setProjectLoaded] = useState(id === "new");
   const { compileState, setCompileState, pdfUrl, setPdfUrl } = useEditorStore();
+
+  useEffect(() => {
+    if (id === "new" || !UUID_REGEX.test(id)) {
+      setProjectLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/projects/${id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.data) return;
+        setContent(data.data.content);
+        setProjectName(data.data.name);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setProjectLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const handleCompile = useCallback(async () => {
     setCompileState({ status: "compiling", startedAt: new Date() });
@@ -61,11 +87,35 @@ export default function ProjectPage({ params }: ProjectPageProps) {
 
   const isCompiling = compileState.status === "compiling";
 
+  const handleSave = useCallback(async () => {
+    if (id === "new" || !UUID_REGEX.test(id)) return;
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      toast.success("Project saved");
+    } catch {
+      toast.error("Failed to save");
+    }
+  }, [id, content]);
+
+  if (!projectLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading project...</div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Header
-        projectName={id === "new" ? "Untitled Project" : `Project ${id}`}
+        projectName={projectName}
         onCompile={handleCompile}
+        onSave={id !== "new" && UUID_REGEX.test(id) ? handleSave : undefined}
         isCompiling={isCompiling}
       />
       <ResizablePanelGroup direction="horizontal" className="flex-1">

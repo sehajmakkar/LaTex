@@ -1,6 +1,7 @@
 "use client";
 
-import { Play, Save, FileDown, Settings, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Play, Save, FileDown, Settings, Sparkles, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -66,7 +67,15 @@ export function Header({ projectName, onCompile, onSave, isCompiling }: HeaderPr
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled>Editor Settings</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/templates" className="flex items-center gap-2">
+                <FileCode2 className="h-4 w-4" />
+                Resume templates
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/">Home</Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5 text-xs text-muted-foreground">
               <p className="font-medium mb-1">AI Shortcuts</p>

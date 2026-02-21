@@ -11,6 +11,8 @@ This guide walks you through setting up and testing the Phase 1 implementation.
 3. [Detailed Setup](#detailed-setup)
 4. [Testing the Application](#testing-the-application)
 5. [Troubleshooting](#troubleshooting)
+6. [Phase 2: AI Inline Edits](#phase-2-ai-inline-edits)
+7. [Phase 3: Resume Templates](#phase-3-resume-templates-developer--tech)
 
 ---
 
@@ -458,11 +460,55 @@ npm run dev
 
 ---
 
+## Phase 3: Resume Templates (Developer / Tech)
+
+### Overview
+
+Four developer-focused resume templates are available: **Modern Tech**, **Minimalist Dev**, **Classic Developer**, and **Tech Lead**. Each uses variables (name, email, phone, location, LinkedIn, GitHub, website) that you fill in before creating the project.
+
+### Testing the Template Flow
+
+1. **Open templates**
+   - Go to http://localhost:3000
+   - Click **"Resume templates"** (or open the header menu → "Resume templates")
+   - You should see the templates page with four cards.
+
+2. **Use a template**
+   - Click **"Use template"** on any card (e.g. "Modern Tech").
+   - A dialog opens with fields: Full Name*, Email*, Phone, Location, LinkedIn, GitHub, Website.
+   - Fill at least the required fields (name, email).
+   - Click **"Create project"**.
+
+3. **Verify project**
+   - You are redirected to the editor with the template content loaded.
+   - Your name, email, and other details should appear in the LaTeX (e.g. `{{name}}` replaced).
+   - Compile to see the PDF with your info.
+
+4. **Save and reload**
+   - Edit the LaTeX, click **Save** in the header.
+   - Refresh the page; your content should persist (requires database).
+
+### Template List
+
+| Template           | Best for                          |
+|--------------------|-----------------------------------|
+| Modern Tech        | Software engineers, clear sections |
+| Minimalist Dev     | Senior engineers, content-first   |
+| Classic Developer  | Full-stack, sidebar contact/skills |
+| Tech Lead          | Tech lead / senior, leadership    |
+
+### API (optional)
+
+- `GET /api/templates` — list all template manifests.
+- `GET /api/templates/[id]` — get template with optional `?variables=` JSON for substitution.
+- `POST /api/templates/[id]` — body `{ "variables": { "name": "...", ... } }` returns `{ "data": { "content": "..." } }`.
+
+---
+
 ## Next Steps
 
-Phases 1 and 2 are complete! The next phases will add:
+Phases 1–3 are complete. Next:
 
-- **Phase 3:** Resume templates gallery
 - **Phase 4:** User auth and billing
 - **Phase 5:** Performance optimizations
 

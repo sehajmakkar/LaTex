@@ -33,3 +33,24 @@ export type ApiError = {
     details?: unknown;
   };
 };
+
+export type TemplateVariable = {
+  key: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+};
+
+export type TemplateManifest = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  variables: TemplateVariable[];
+};
+
+export type Template = TemplateManifest & {
+  content: string;
+};
+
+export type TemplateWithContent = Template;
