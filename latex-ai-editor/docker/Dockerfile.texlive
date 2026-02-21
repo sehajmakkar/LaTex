@@ -1,0 +1,25 @@
+# LaTeX compilation Docker image
+# Uses Alpine-based TeX Live for smaller image size
+
+FROM alpine:3.19
+
+# Install TeX Live and required packages
+RUN apk add --no-cache \
+    texlive \
+    texlive-xetex \
+    texlive-luatex \
+    texmf-dist-most \
+    texmf-dist-lang \
+    fontconfig \
+    freetype \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user for security
+RUN adduser -D -u 1000 latex
+USER latex
+
+# Set working directory
+WORKDIR /data
+
+# Default command
+CMD ["pdflatex", "--version"]

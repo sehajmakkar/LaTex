@@ -4,10 +4,10 @@ overview: A phased plan for building an AI-native LaTeX editor ("Cursor for LaTe
 todos:
   - id: phase-1-foundation
     content: "Phase 1: Next.js + CodeMirror editor + Docker compile + PDF preview + persistence"
-    status: pending
+    status: completed
   - id: phase-2-ai-edits
     content: "Phase 2: codemirror-ai integration, backend AI proxy, LaTeX-aware prompts"
-    status: pending
+    status: completed
   - id: phase-3-templates
     content: "Phase 3: Template data model, picker UI, variable substitution, 3-5 templates"
     status: pending
@@ -91,7 +91,7 @@ flowchart TB
 | **Queue**             | Inngest or BullMQ + Redis                          | Compile job queue, rate limiting                                                            |
 | **Auth**              | Clerk                                              | SaaS-optimized, OAuth + email, user management UI included                                  |
 | **Billing**           | Stripe                                             | Subscriptions, checkout, webhooks, customer portal                                          |
-| **AI Provider**       | OpenAI API (GPT-4o) / Anthropic Claude             | Streaming completions for inline edits                                                      |
+| **AI Provider**       | Google Gemini                                      | Streaming completions for inline edits                                                      |
 
 
 ---
