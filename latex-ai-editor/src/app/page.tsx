@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { FileCode2, FileText, LayoutDashboard } from "lucide-react";
+import { FileCode2, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 export default function HomePage() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -27,6 +28,9 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background p-6">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="flex items-center gap-2">
         <FileCode2 className="h-8 w-8 text-primary" />
         <h1 className="text-2xl font-bold">LaTeX AI Editor</h1>

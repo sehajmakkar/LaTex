@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, FileCode2, Loader2 } from "lucide-react";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { TemplateCard } from "@/components/templates/TemplateCard";
 import { UseTemplateDialog } from "@/components/templates/UseTemplateDialog";
@@ -50,9 +51,12 @@ export default function TemplatesPage() {
             <h1 className="text-lg font-semibold">Developer resume templates</h1>
           </div>
         </div>
-        <Button variant="outline" size="sm" asChild>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button variant="outline" size="sm" asChild>
           <Link href="/project/new">Blank project</Link>
-        </Button>
+          </Button>
+        </div>
       </header>
 
       <main className="flex-1 overflow-auto p-6">

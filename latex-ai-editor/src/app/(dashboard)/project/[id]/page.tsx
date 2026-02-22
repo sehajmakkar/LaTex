@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import { useDebouncedCallback } from "use-debounce";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -43,7 +44,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data?.data) return;
-        setContent(data.data.content);
+        setContent(data.data.content || DEFAULT_LATEX_CONTENT);
         setProjectName(data.data.name);
       })
       .catch(() => {})
@@ -54,6 +55,22 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       cancelled = true;
     };
   }, [id, router]);
+
+  const saveContent = useCallback(async (contentToSave: string) => {
+    if (id === "new" || !UUID_REGEX.test(id)) return;
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: contentToSave }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+    } catch {
+      toast.error("Failed to save");
+    }
+  }, [id]);
+
+  const debouncedSave = useDebouncedCallback((c: string) => saveContent(c), 2000);
 
   const handleCompile = useCallback(async () => {
     setCompileState({ status: "compiling", startedAt: new Date() });
@@ -78,6 +95,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
           pdfUrl: result.data.pdfUrl,
           compiledAt: new Date(),
         });
+        await saveContent(content);
         return result;
       })(),
       {
@@ -89,24 +107,32 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         },
       }
     );
-  }, [id, content, setCompileState, setPdfUrl]);
+  }, [id, content, setCompileState, setPdfUrl, saveContent]);
 
   const isCompiling = compileState.status === "compiling";
 
-  const handleSave = useCallback(async () => {
-    if (id === "new" || !UUID_REGEX.test(id)) return;
-    try {
-      const res = await fetch(`/api/projects/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      toast.success("Project saved");
-    } catch {
-      toast.error("Failed to save");
-    }
-  }, [id, content]);
+  useEffect(() => {
+    if (!projectLoaded || id === "new" || !UUID_REGEX.test(id)) return;
+    debouncedSave(content);
+  }, [content, projectLoaded, id, debouncedSave]);
+
+  const handleRename = useCallback(
+    async (name: string) => {
+      if (id === "new" || !UUID_REGEX.test(id)) return;
+      try {
+        const res = await fetch(`/api/projects/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) throw new Error("Rename failed");
+        setProjectName(name);
+      } catch {
+        toast.error("Failed to rename project");
+      }
+    },
+    [id]
+  );
 
   if (!projectLoaded) {
     return (
@@ -121,8 +147,9 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       <Header
         projectName={projectName}
         onCompile={handleCompile}
-        onSave={id !== "new" && UUID_REGEX.test(id) ? handleSave : undefined}
         isCompiling={isCompiling}
+        backHref="/dashboard"
+        onRename={id !== "new" && UUID_REGEX.test(id) ? handleRename : undefined}
       />
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         <ResizablePanel defaultSize={55} minSize={30}>

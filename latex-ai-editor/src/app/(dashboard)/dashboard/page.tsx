@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileCode2, FileText, Plus, Loader2, Trash2 } from "lucide-react";
+import { FileCode2, FileText, Plus, Loader2, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/card";
 import { useUser, SignOutButton } from "@clerk/nextjs";
 import { toast } from "sonner";
-import { FREE_PROJECT_LIMIT } from "@/lib/constants";
+import { FREE_PROJECT_LIMIT, DEFAULT_LATEX_CONTENT } from "@/lib/constants";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 type Project = {
   id: string;
@@ -30,6 +31,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -66,7 +69,10 @@ export default function DashboardPage() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Untitled Project", content: "" }),
+        body: JSON.stringify({
+          name: "Untitled Project",
+          content: DEFAULT_LATEX_CONTENT,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -102,6 +108,34 @@ export default function DashboardPage() {
     []
   );
 
+  const handleStartRename = useCallback((project: Project) => {
+    setEditingId(project.id);
+    setEditName(project.name);
+  }, []);
+
+  const handleRename = useCallback(
+    async (id: string) => {
+      const name = editName.trim();
+      setEditingId(null);
+      if (!name || name === projects.find((p) => p.id === id)?.name) return;
+      try {
+        const res = await fetch(`/api/projects/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) throw new Error("Failed to rename");
+        setProjects((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, name, updatedAt: new Date().toISOString() } : p))
+        );
+        toast.success("Project renamed");
+      } catch {
+        toast.error("Failed to rename project");
+      }
+    },
+    [editName, projects]
+  );
+
   if (!isLoaded || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -123,6 +157,7 @@ export default function DashboardPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button variant="outline" size="sm" asChild>
             <Link href="/templates">Templates</Link>
           </Button>
@@ -174,14 +209,47 @@ export default function DashboardPage() {
             {projects.map((project) => (
               <Card key={project.id} className="flex flex-col">
                 <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
-                  <CardTitle className="truncate text-base">
-                    <Link
-                      href={`/project/${project.id}`}
-                      className="hover:underline"
-                    >
-                      {project.name}
-                    </Link>
-                  </CardTitle>
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    {editingId === project.id ? (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onBlur={() => handleRename(project.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRename(project.id);
+                          if (e.key === "Escape") {
+                            setEditingId(null);
+                            setEditName("");
+                          }
+                        }}
+                        className="flex-1 min-w-0 rounded border bg-background px-2 py-1 text-sm font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        autoFocus
+                      />
+                    ) : (
+                      <>
+                        <CardTitle className="truncate text-base">
+                          <Link
+                            href={`/project/${project.id}`}
+                            className="hover:underline"
+                          >
+                            {project.name}
+                          </Link>
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleStartRename(project);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"

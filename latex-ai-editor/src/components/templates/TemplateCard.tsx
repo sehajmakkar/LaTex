@@ -1,6 +1,6 @@
 "use client";
 
-import { FileCode2 } from "lucide-react";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -12,6 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import type { TemplateManifest } from "@/types";
 
+const TEMPLATE_PREVIEW_IMAGE =
+  "https://res.cloudinary.com/drrvrit9i/image/upload/v1771757683/resume-demo_prcwka.png";
+
 type TemplateCardProps = {
   template: TemplateManifest;
   onUseTemplate: (template: TemplateManifest) => void;
@@ -19,21 +22,22 @@ type TemplateCardProps = {
 
 export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
   return (
-    <Card className="flex flex-col transition-shadow hover:shadow-md">
-      <CardHeader className="pb-2">
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <FileCode2 className="h-6 w-6" />
-        </div>
+    <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-md">
+      <div className="relative w-full aspect-[3/4] max-h-52 shrink-0 bg-muted/50">
+        <Image
+          src={TEMPLATE_PREVIEW_IMAGE}
+          alt={`Preview of ${template.name} resume`}
+          fill
+          className="object-contain"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        />
+      </div>
+      <CardHeader className="pb-1 pt-3">
         <CardTitle className="text-base">{template.name}</CardTitle>
-        <CardDescription className="line-clamp-2 text-xs">
+        <CardDescription className="line-clamp-1 text-xs">
           {template.description}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 pb-2">
-        <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          {template.category}
-        </span>
-      </CardContent>
       <CardFooter className="pt-2">
         <Button
           variant="default"

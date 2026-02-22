@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Play, Save, FileDown, Settings, Sparkles, FileCode2 } from "lucide-react";
+import { Play, FileDown, Settings, Sparkles, FileCode2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,26 +13,78 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useEditorStore } from "@/stores/editor-store";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 type HeaderProps = {
   projectName: string;
   onCompile: () => void;
-  onSave?: () => void;
   isCompiling?: boolean;
+  backHref?: string;
+  onRename?: (name: string) => void;
 };
 
-export function Header({ projectName, onCompile, onSave, isCompiling }: HeaderProps) {
+export function Header({ projectName, onCompile, isCompiling, backHref, onRename }: HeaderProps) {
   const { pdfUrl } = useEditorStore();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState(projectName);
+  useEffect(() => {
+    if (!isEditingName) setEditName(projectName);
+  }, [projectName, isEditingName]);
+
+  const handleNameSave = useCallback(() => {
+    const trimmed = editName.trim();
+    setIsEditingName(false);
+    if (trimmed && trimmed !== projectName && onRename) {
+      onRename(trimmed);
+    } else {
+      setEditName(projectName);
+    }
+  }, [editName, projectName, onRename]);
 
   return (
     <header className="flex h-14 items-center justify-between border-b bg-background px-4">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">LaTeX AI Editor</h1>
+      <div className="flex items-center gap-4 min-w-0">
+        {backHref && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
+            <Link href={backHref} aria-label="Go back">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+        )}
+        <div className="flex items-center gap-2 min-w-0">
+          <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+          <h1 className="text-lg font-semibold truncate">LaTeX AI Editor</h1>
         </div>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">{projectName}</span>
+        <span className="text-sm text-muted-foreground shrink-0">/</span>
+        {onRename ? (
+          isEditingName ? (
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={handleNameSave}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleNameSave();
+                if (e.key === "Escape") {
+                  setIsEditingName(false);
+                  setEditName(projectName);
+                }
+              }}
+              className="min-w-[120px] max-w-[240px] rounded border bg-background px-2 py-1 text-sm font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsEditingName(true)}
+              className="text-sm font-medium truncate hover:underline text-left max-w-[200px]"
+            >
+              {projectName}
+            </button>
+          )
+        ) : (
+          <span className="text-sm font-medium truncate">{projectName}</span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -45,13 +98,6 @@ export function Header({ projectName, onCompile, onSave, isCompiling }: HeaderPr
           {isCompiling ? "Compiling..." : "Compile"}
         </Button>
 
-        {onSave && (
-          <Button variant="outline" size="sm" onClick={onSave} className="gap-2">
-            <Save className="h-4 w-4" />
-            Save
-          </Button>
-        )}
-
         {pdfUrl && (
           <Button variant="outline" size="sm" asChild className="gap-2">
             <a href={pdfUrl} download="document.pdf">
@@ -62,6 +108,7 @@ export function Header({ projectName, onCompile, onSave, isCompiling }: HeaderPr
         )}
 
         <div className="flex items-center gap-1">
+          <ThemeToggle />
           <UserButton
             afterSignOutUrl="/"
             appearance={{
