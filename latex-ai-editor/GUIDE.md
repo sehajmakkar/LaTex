@@ -9,10 +9,12 @@ This guide walks you through setting up and testing the Phase 1 implementation.
 1. [Prerequisites](#prerequisites)
 2. [Quick Start](#quick-start)
 3. [Detailed Setup](#detailed-setup)
-4. [Testing the Application](#testing-the-application)
-5. [Troubleshooting](#troubleshooting)
-6. [Phase 2: AI Inline Edits](#phase-2-ai-inline-edits)
-7. [Phase 3: Resume Templates](#phase-3-resume-templates-developer--tech)
+4. [Database: NeonDB Setup](#database-neondb-setup)
+5. [Phase 4: Auth (Clerk) and project limits](#phase-4-auth-clerk-and-project-limits)
+6. [Testing the Application](#testing-the-application)
+7. [Troubleshooting](#troubleshooting)
+8. [Phase 2: AI Inline Edits](#phase-2-ai-inline-edits)
+9. [Phase 3: Resume Templates](#phase-3-resume-templates-developer--tech)
 
 ---
 
@@ -100,11 +102,11 @@ pdfTeX 3.x.x (TeX Live 2024)
 ...
 ```
 
-### Step 3: Set Up Database (Optional)
+### Step 3: Set Up Database
 
-The app works without a database for basic editing, but persistence requires PostgreSQL.
+The app requires a PostgreSQL database for auth, projects, and templates. Use **Neon** (recommended) or local Postgres. See [Database: NeonDB Setup](#database-neondb-setup) for full Neon instructions.
 
-#### Using Docker (Recommended)
+#### Using Docker (local development)
 
 ```bash
 # Start PostgreSQL
@@ -134,16 +136,20 @@ cp .env.example .env
 # Edit if needed (defaults work for local Docker setup)
 ```
 
-Default `.env` contents:
-```
-DATABASE_URL=postgresql://latex:latex@localhost:5432/latex_ai_editor
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
+See [Database: NeonDB Setup](#database-neondb-setup) and [Phase 4: Auth](#phase-4-auth-clerk-and-project-limits) for required env vars (Neon `DATABASE_URL`, Clerk keys).
 
-### Step 5: Run Database Migrations (if using DB)
+### Step 5: Run Database Migrations
+
+After setting `DATABASE_URL` (Neon or local):
 
 ```bash
 npm run db:push
+```
+
+Or run migrations explicitly:
+
+```bash
+npm run db:migrate
 ```
 
 ### Step 6: Start the Application
@@ -161,17 +167,133 @@ You should see:
 
 ---
 
+## Database: NeonDB Setup
+
+Use [Neon](https://neon.tech) as your Postgres database so the app works locally and in production without running Postgres yourself.
+
+### 1. Create a Neon account and project
+
+1. Go to [neon.tech](https://neon.tech) and sign up (or sign in).
+2. Click **New Project**.
+3. Choose a name (e.g. `latex-ai-editor`), region, and Postgres version (16 recommended).
+4. Click **Create project**.
+
+### 2. Get the connection string
+
+1. In the Neon dashboard, open your project.
+2. Go to **Connection Details** (or **Dashboard** → connection string).
+3. Select **Connection string** and copy the URI. It looks like:
+   ```
+   postgresql://USER:PASSWORD@ep-XXX-XXX.region.aws.neon.tech/neondb?sslmode=require
+   ```
+4. Optional: use a **pooled** connection string if Neon shows one (e.g. for serverless). The non-pooled URI works with this app.
+
+### 3. Configure the app
+
+1. In the project root, copy the example env file if you haven’t:
+   ```bash
+   cp .env.example .env
+   ```
+2. Set `DATABASE_URL` in `.env` to the Neon connection string:
+   ```bash
+   DATABASE_URL="postgresql://USER:PASSWORD@ep-XXX-XXX.region.aws.neon.tech/neondb?sslmode=require"
+   ```
+   Use the exact string from Neon (with your user, password, and endpoint). Keep the `?sslmode=require` part.
+
+### 4. Run migrations against Neon
+
+From the project root:
+
+```bash
+npm run db:push
+```
+
+This applies the schema (users, projects, compilations, user_usage) to your Neon database. Or generate and run migrations:
+
+```bash
+npm run db:generate
+npm run db:migrate
+```
+
+### 5. Verify
+
+- Start the app: `npm run dev`.
+- Sign in (see Phase 4). Creating a project should create rows in Neon.
+- In Neon dashboard, use **SQL Editor** and run `SELECT * FROM users;` and `SELECT * FROM projects;` to confirm data.
+
+### Notes
+
+- **Security:** Never commit `.env`. The Neon connection string contains the database password.
+- **Branching:** Neon supports database branching; you can create a branch for staging and point `DATABASE_URL` to it.
+- **Local fallback:** For local-only development you can still use Docker Postgres and set `DATABASE_URL=postgresql://latex:latex@localhost:5432/latex_ai_editor`.
+
+---
+
+## Phase 4: Auth (Clerk) and project limits
+
+Auth is handled by **Clerk** with **Google sign-in only**. Free users can create up to **3 projects**; the database is ready for Stripe billing later (Phase 5).
+
+### Clerk setup (Google only)
+
+1. Go to [clerk.com](https://clerk.com) and create an application (or use an existing one).
+2. In the Clerk Dashboard, go to **User & Authentication** → **Social connections** and enable **Google**. Disable Email and any other methods if you want only Google.
+3. In **Paths**, set Sign-in URL to `/sign-in` and Sign-up URL to `/sign-up` (or leave defaults; the app uses `[[...sign-in]]` and `[[...sign-up]]`).
+4. Copy the API keys:
+   - **Publishable key** (starts with `pk_test_` or `pk_live_`)
+   - **Secret key** (starts with `sk_test_` or `sk_live_`)
+
+### Environment variables
+
+Add to `.env`:
+
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+```
+
+Optional (defaults are fine for local):
+
+```bash
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+```
+
+Restart the dev server after changing env.
+
+### Testing auth and project limit
+
+1. Open http://localhost:3000. You should see the landing page with **Sign in with Google**.
+2. Click **Sign in with Google** and complete sign-in. You should be redirected to **Dashboard** (`/dashboard`).
+3. On the dashboard you should see **Your projects** and **0 / 3 projects (free)**.
+4. Click **New project**. A new project is created and you are taken to the editor. Confirm the project appears on the dashboard after you go back.
+5. Create two more projects (3 total). The **New project** button should still work.
+6. Try creating a fourth project. You should see an error that free accounts are limited to 3 projects.
+7. Delete one project (trash icon), then create another. It should succeed.
+8. Click **Sign out**. You should be back on the home page; visiting `/dashboard` or `/templates` should redirect to sign-in.
+
+### Database tables for Phase 4 (and Phase 5 billing)
+
+- **users** – Clerk user id, email, name, `plan` (free/pro), `stripeCustomerId`, `stripeSubscriptionId`, `subscriptionStatus`. Used for project limit and future billing.
+- **user_usage** – Daily usage (compiles, ai_edits) for future rate limits and billing.
+- **projects** – `userId` links to `users.id` (Clerk id). Only the owner can view/edit/delete.
+
+Stripe integration (checkout, webhooks, customer portal) is planned for Phase 5.
+
+---
+
 ## Testing the Application
 
 ### Test 1: Basic Editor UI
 
-1. Open http://localhost:3000
-2. You should be redirected to `/project/new`
+1. Open http://localhost:3000 and sign in (see [Phase 4](#phase-4-auth-clerk-and-project-limits) if needed).
+2. From the dashboard, click **New project** to create a project and open the editor.
 3. **Verify:**
    - Two-pane layout (editor left, preview right)
    - CodeMirror editor with LaTeX syntax highlighting
-   - Default LaTeX content is loaded
-   - Header shows "LaTeX AI Editor / Untitled Project"
+   - Default or template content is loaded
+   - Header shows project name and Compile / Save
 
 ### Test 2: Editor Features
 

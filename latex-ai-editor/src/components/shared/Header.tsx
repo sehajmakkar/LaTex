@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 import { Play, Save, FileDown, Settings, Sparkles, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +61,15 @@ export function Header({ projectName, onCompile, onSave, isCompiling }: HeaderPr
           </Button>
         )}
 
+        <div className="flex items-center gap-1">
+          <UserButton
+            afterSignOutUrl="/"
+            appearance={{
+              elements: {
+                avatarBox: "h-8 w-8",
+              },
+            }}
+          />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -85,6 +95,7 @@ export function Header({ projectName, onCompile, onSave, isCompiling }: HeaderPr
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   );

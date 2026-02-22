@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { use } from "react";
+import { useRouter } from "next/navigation";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -22,13 +23,18 @@ type ProjectPageProps = {
 
 export default function ProjectPage({ params }: ProjectPageProps) {
   const { id } = use(params);
+  const router = useRouter();
   const [content, setContent] = useState(DEFAULT_LATEX_CONTENT);
-  const [projectName, setProjectName] = useState(id === "new" ? "Untitled Project" : "Loading...");
-  const [projectLoaded, setProjectLoaded] = useState(id === "new");
+  const [projectName, setProjectName] = useState("Loading...");
+  const [projectLoaded, setProjectLoaded] = useState(false);
   const { compileState, setCompileState, pdfUrl, setPdfUrl } = useEditorStore();
 
   useEffect(() => {
-    if (id === "new" || !UUID_REGEX.test(id)) {
+    if (id === "new") {
+      router.replace("/dashboard");
+      return;
+    }
+    if (!UUID_REGEX.test(id)) {
       setProjectLoaded(true);
       return;
     }
@@ -47,7 +53,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, router]);
 
   const handleCompile = useCallback(async () => {
     setCompileState({ status: "compiling", startedAt: new Date() });

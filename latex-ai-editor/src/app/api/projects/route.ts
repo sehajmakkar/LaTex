@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { projectService } from "@/services/project-service";
-import { AppError } from "@/lib/errors";
+import { userService } from "@/services/user-service";
+import { AppError, ProjectLimitError } from "@/lib/errors";
 
 const CreateProjectSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -11,7 +13,18 @@ const CreateProjectSchema = z.object({
 
 export async function GET() {
   try {
-    const projects = await projectService.getAll();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: { code: "UNAUTHORIZED", message: "Sign in to view projects" } },
+        { status: 401 }
+      );
+    }
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress ?? "";
+    const name = clerkUser?.fullName ?? null;
+    await userService.ensureUser(userId, email, name);
+    const projects = await projectService.getByUserId(userId);
     return NextResponse.json({ data: projects });
   } catch (error) {
     console.error("Error fetching projects:", error);
@@ -24,6 +37,19 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: { code: "UNAUTHORIZED", message: "Sign in to create a project" } },
+        { status: 401 }
+      );
+    }
+
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress ?? "";
+    const name = clerkUser?.fullName ?? null;
+    await userService.ensureUser(userId, email, name);
+
     const body = await req.json();
     const parsed = CreateProjectSchema.safeParse(body);
 
@@ -34,15 +60,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const project = await projectService.create({
-      name: parsed.data.name || "Untitled Project",
-      content: parsed.data.content || "",
-      templateId: parsed.data.templateId || null,
-      userId: null,
+    const project = await projectService.createForUser(userId, {
+      name: parsed.data.name ?? "Untitled Project",
+      content: parsed.data.content ?? "",
+      templateId: parsed.data.templateId ?? null,
     });
 
     return NextResponse.json({ data: project }, { status: 201 });
   } catch (error) {
+    if (error instanceof ProjectLimitError) {
+      return NextResponse.json(
+        { error: { code: error.code, message: error.message } },
+        { status: error.statusCode }
+      );
+    }
     if (error instanceof AppError) {
       return NextResponse.json(
         { error: { code: error.code, message: error.message, details: error.details } },

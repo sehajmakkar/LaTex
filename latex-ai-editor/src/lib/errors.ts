@@ -28,6 +28,12 @@ export class CompileError extends AppError {
   }
 }
 
+export class ProjectLimitError extends AppError {
+  constructor(message: string) {
+    super("PROJECT_LIMIT_REACHED", message, 403);
+  }
+}
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;

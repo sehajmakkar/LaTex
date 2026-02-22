@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { projectService } from "@/services/project-service";
 import { AppError } from "@/lib/errors";
@@ -14,8 +15,21 @@ type RouteParams = {
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: { code: "UNAUTHORIZED", message: "Sign in to view this project" } },
+        { status: 401 }
+      );
+    }
     const { id } = await params;
     const project = await projectService.getById(id);
+    if (project.userId !== userId) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Project not found" } },
+        { status: 404 }
+      );
+    }
     return NextResponse.json({ data: project });
   } catch (error) {
     if (error instanceof AppError) {
@@ -34,6 +48,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: { code: "UNAUTHORIZED", message: "Sign in to update this project" } },
+        { status: 401 }
+      );
+    }
     const { id } = await params;
     const body = await req.json();
     const parsed = UpdateProjectSchema.safeParse(body);
@@ -45,7 +66,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const project = await projectService.update(id, parsed.data);
+    const project = await projectService.update(id, userId, parsed.data);
     return NextResponse.json({ data: project });
   } catch (error) {
     if (error instanceof AppError) {
@@ -64,8 +85,15 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: { code: "UNAUTHORIZED", message: "Sign in to delete this project" } },
+        { status: 401 }
+      );
+    }
     const { id } = await params;
-    await projectService.delete(id);
+    await projectService.delete(id, userId);
     return NextResponse.json({ data: { success: true } });
   } catch (error) {
     if (error instanceof AppError) {

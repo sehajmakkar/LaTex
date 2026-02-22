@@ -42,3 +42,5 @@ Start editing to see your changes reflected in the PDF preview!
 
 export const MAX_CONTENT_SIZE = 500_000; // 500KB
 export const COMPILE_TIMEOUT_MS = 60_000; // 60 seconds
+
+export const FREE_PROJECT_LIMIT = 3;

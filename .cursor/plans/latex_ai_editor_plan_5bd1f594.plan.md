@@ -12,8 +12,8 @@ todos:
     content: "Phase 3: Template data model, picker UI, variable substitution, 3-5 templates"
     status: completed
   - id: phase-4-auth-billing
-    content: "Phase 4: Clerk auth, project CRUD, usage tracking, Stripe billing, share links"
-    status: pending
+    content: "Phase 4: Clerk auth (Google only), project CRUD, 3-project limit, NeonDB; Stripe in Phase 5"
+    status: completed
   - id: phase-5-polish
     content: "Phase 5: Incremental compile, queue, more templates, export, mobile"
     status: pending
@@ -278,7 +278,7 @@ All code in this project should follow these standards for consistency.
 
 - **Compiles**: 50/day
 - **AI edits**: 20/day  
-- **Projects**: 5 max
+- **Projects**: 3 max
 - **Storage**: 50MB total
 
 ### Paid Tier (Per User/Month)
