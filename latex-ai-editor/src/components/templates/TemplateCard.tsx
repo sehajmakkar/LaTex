@@ -1,14 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { TemplateManifest } from "@/types";
 
@@ -22,32 +14,37 @@ type TemplateCardProps = {
 
 export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
   return (
-    <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-md">
-      <div className="relative w-full aspect-[3/4] max-h-52 shrink-0 bg-muted/50">
-        <Image
-          src={TEMPLATE_PREVIEW_IMAGE}
-          alt={`Preview of ${template.name} resume`}
-          fill
-          className="object-contain"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-        />
+    <article className="group flex h-full flex-col rounded-xs">
+      {/* Preview image */}
+      <div className="relative w-full shrink-0 overflow-hidden shadow-xl">
+        <div className="relative aspect-[210/297] w-full">
+          <Image
+            src={TEMPLATE_PREVIEW_IMAGE}
+            alt={`Preview of ${template.name} resume`}
+            fill
+            className="object-cover object-top"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+        </div>
       </div>
-      <CardHeader className="pb-1 pt-3">
-        <CardTitle className="text-base">{template.name}</CardTitle>
-        <CardDescription className="line-clamp-1 text-xs">
+
+      {/* Content below image */}
+      <div className="flex flex-1 flex-col p-1 pt-2">
+        <h3 className="text-base font-semibold tracking-tight text-slate-800 dark:text-slate-100">
+          {template.name}
+        </h3>
+        <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-400">
           {template.description}
-        </CardDescription>
-      </CardHeader>
-      <CardFooter className="pt-2">
+        </p>
         <Button
           variant="default"
           size="sm"
-          className="w-full"
+          className="mt-3 w-full"
           onClick={() => onUseTemplate(template)}
         >
           Use template
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </article>
   );
 }
