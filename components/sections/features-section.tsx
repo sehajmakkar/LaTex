@@ -5,14 +5,14 @@ import { Zap, BarChart3, Layers, ArrowRight, Command } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const integrationLogos = [
-  { name: "Keywords" },
-  { name: "Format" },
-  { name: "Impact" },
-  { name: "Clarity" },
-  { name: "Length" },
-  { name: "Action Verbs" },
-  { name: "Sections" },
-  { name: "Consistency" },
+  { name: "Apple", src: "/logo/512px-Apple_logo_white.svg.png" },
+  { name: "Google", src: "/logo/google-icon-logo-svgrepo-com.svg" },
+  { name: "LinkedIn", src: "/logo/linkedin-icon-2.svg" },
+  { name: "Amazon", src: "/logo/logo-amazon.svg" },
+  { name: "Meta", src: "/logo/meta-3.svg" },
+  { name: "Microsoft", src: "/logo/microsoft-5.svg" },
+  { name: "Netflix", src: "/logo/netflix-logo-icon.svg" },
+  { name: "OpenAI", src: "/logo/icons8-chatgpt-100.png" },
 ];
 
 export function FeaturesSection() {
@@ -315,7 +315,11 @@ export function FeaturesSection() {
                       whileHover={{ scale: 1.15, y: -2 }}
                       className="aspect-square rounded-lg border border-zinc-800 bg-zinc-800/50 flex items-center justify-center cursor-pointer"
                     >
-                      <div className="w-5 h-5 rounded bg-zinc-700" />
+                      <img
+                        src={logo.src}
+                        alt={logo.name}
+                        className="w-9 h-9 object-contain"
+                      />
                     </motion.div>
                   ))}
                 </div>
