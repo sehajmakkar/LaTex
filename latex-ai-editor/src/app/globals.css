@@ -157,3 +157,10 @@ html {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ── Clerk Customizations ── */
+.cl-socialButtonsProviderIcon__google {
+  content: url('/logo/google-icon-logo-svgrepo-com.svg') !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}

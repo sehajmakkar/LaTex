@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileCode2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, FileCode2, Loader2, LayoutDashboard } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { TemplateCard } from "@/components/templates/TemplateCard";
 import { UseTemplateDialog } from "@/components/templates/UseTemplateDialog";
@@ -10,6 +12,8 @@ import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import type { TemplateManifest } from "@/types";
 
 export default function TemplatesPage() {
+  const { isSignedIn } = useAuth();
+  const router = useRouter();
   const [templates, setTemplates] = useState<TemplateManifest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateManifest | null>(null);
@@ -32,17 +36,25 @@ export default function TemplatesPage() {
     fetchTemplates();
   }, [fetchTemplates]);
 
-  const handleUseTemplate = useCallback((template: TemplateManifest) => {
-    setSelectedTemplate(template);
-    setDialogOpen(true);
-  }, []);
+  const handleUseTemplate = useCallback(
+    (template: TemplateManifest) => {
+      if (!isSignedIn) {
+        // Redirect to sign-in and then back to templates
+        router.push("/sign-in?redirect_url=/templates");
+        return;
+      }
+      setSelectedTemplate(template);
+      setDialogOpen(true);
+    },
+    [isSignedIn, router]
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 backdrop-blur-md px-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard">
+            <Link href={isSignedIn ? "/dashboard" : "/"}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
@@ -55,9 +67,18 @@ export default function TemplatesPage() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard">Back to projects</Link>
-          </Button>
+          {isSignedIn ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard">Back to projects</Link>
+            </Button>
+          ) : (
+            <Button size="sm" asChild className="gap-2">
+              <Link href="/sign-in?redirect_url=/templates">
+                <LayoutDashboard className="h-4 w-4" />
+                Sign in
+              </Link>
+            </Button>
+          )}
         </div>
       </header>
 

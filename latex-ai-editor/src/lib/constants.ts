@@ -15,7 +15,7 @@ export const DEFAULT_LATEX_CONTENT = `\\documentclass[11pt,a4paper]{article}
 \\maketitle
 
 \\section{Introduction}
-Welcome to the LaTeX AI Editor! This is a simple document to get you started.
+Welcome to TeXel! This is a simple document to get you started.
 
 \\section{Features}
 \\begin{itemize}

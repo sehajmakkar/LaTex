@@ -229,8 +229,8 @@ export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEdito
           },
           onError: (error) => {
             console.error("AI extension error:", error);
-            toast.error("AI Error", { 
-              description: error instanceof Error ? error.message : "An error occurred" 
+            toast.error("AI Error", {
+              description: error instanceof Error ? error.message : "An error occurred"
             });
           },
           keymaps: {

@@ -53,7 +53,7 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
         )}
         <div className="flex items-center gap-2 min-w-0">
           <Sparkles className="h-5 w-5 shrink-0 text-muted-foreground" />
-          <h1 className="font-display text-lg font-semibold truncate">LaTeX AI Editor</h1>
+          <h1 className="font-display text-lg font-semibold truncate">TeXel</h1>
         </div>
         <span className="text-sm text-muted-foreground shrink-0">/</span>
         {onRename ? (

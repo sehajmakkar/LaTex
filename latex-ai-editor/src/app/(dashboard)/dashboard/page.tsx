@@ -152,7 +152,7 @@ export default function DashboardPage() {
             <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
               <FileCode2 className="h-4 w-4 text-muted-foreground" />
             </div>
-            <span className="font-display font-semibold">LaTeX AI Editor</span>
+            <span className="font-display font-semibold">TeXel</span>
           </Link>
           <span className="text-sm text-muted-foreground">
             {user?.firstName ?? "User"}

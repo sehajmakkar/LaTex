@@ -7,10 +7,35 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { MAX_CONTENT_SIZE, COMPILE_TIMEOUT_MS } from "@/lib/constants";
 
+type Engine = "pdflatex" | "xelatex" | "lualatex";
+
 const CompileRequestSchema = z.object({
   projectId: z.string(),
   content: z.string().max(MAX_CONTENT_SIZE),
+  engine: z.enum(["pdflatex", "xelatex", "lualatex"]).optional(),
 });
+
+function detectEngine(content: string): Engine {
+  // Explicit TeX program directive (Overleaf-style comments)
+  if (content.includes("% !TEX program = xelatex")) return "xelatex";
+  if (content.includes("% !TEX program = lualatex")) return "lualatex";
+  if (content.includes("% !TEX program = pdflatex")) return "pdflatex";
+
+  // fontspec requires xelatex or lualatex — default to xelatex
+  if (content.includes("\\usepackage{fontspec}")) return "xelatex";
+
+  // luacode or luatexbase are lualatex-specific
+  if (
+    content.includes("\\usepackage{luacode}") ||
+    content.includes("\\usepackage{luatexbase}")
+  )
+    return "lualatex";
+
+  // unicode-math works with both but is most common with xelatex
+  if (content.includes("\\usepackage{unicode-math}")) return "xelatex";
+
+  return "pdflatex";
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,12 +44,22 @@ export async function POST(req: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: { code: "VALIDATION_ERROR", message: "Invalid request", details: parsed.error.flatten() } },
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid request",
+            details: parsed.error.flatten(),
+          },
+        },
         { status: 400 }
       );
     }
 
-    const { content } = parsed.data;
+    const { content, engine: requestedEngine } = parsed.data;
+
+    // Use explicitly requested engine, otherwise auto-detect from content
+    const engine: Engine = requestedEngine ?? detectEngine(content);
+
     const jobId = randomUUID();
     const workDir = join(tmpdir(), "latex-compile", jobId);
 
@@ -33,11 +68,17 @@ export async function POST(req: NextRequest) {
     const texFile = join(workDir, "main.tex");
     await writeFile(texFile, content, "utf-8");
 
-    const result = await compileLatex(workDir, "main.tex");
+    const result = await compileLatex(workDir, "main.tex", engine);
 
     if (!result.success) {
       return NextResponse.json(
-        { error: { code: "COMPILE_ERROR", message: "Compilation failed", details: { log: result.log } } },
+        {
+          error: {
+            code: "COMPILE_ERROR",
+            message: "Compilation failed",
+            details: { log: result.log, engine },
+          },
+        },
         { status: 422 }
       );
     }
@@ -53,6 +94,7 @@ export async function POST(req: NextRequest) {
       data: {
         pdfUrl,
         log: result.log,
+        engine, // useful for the client to know which engine was used
       },
     });
   } catch (error) {
@@ -69,7 +111,11 @@ type CompileResult = {
   log: string;
 };
 
-async function compileLatex(workDir: string, filename: string): Promise<CompileResult> {
+async function compileLatex(
+  workDir: string,
+  filename: string,
+  engine: Engine
+): Promise<CompileResult> {
   return new Promise((resolve) => {
     const args = [
       "-interaction=nonstopmode",
@@ -78,7 +124,7 @@ async function compileLatex(workDir: string, filename: string): Promise<CompileR
       filename,
     ];
 
-    const proc = spawn("pdflatex", args, {
+    const proc = spawn(engine, args, {
       cwd: workDir,
       timeout: COMPILE_TIMEOUT_MS,
     });
@@ -105,7 +151,7 @@ async function compileLatex(workDir: string, filename: string): Promise<CompileR
     proc.on("error", (error) => {
       resolve({
         success: false,
-        log: `Failed to start pdflatex: ${error.message}. Make sure LaTeX is installed.`,
+        log: `Failed to start ${engine}: ${error.message}. Make sure LaTeX is installed.`,
       });
     });
   });

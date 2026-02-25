@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { FileCode2, LayoutDashboard } from "lucide-react";
+import Image from "next/image";
+import { FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
@@ -35,7 +36,7 @@ export default function HomePage() {
         <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
           <FileCode2 className="h-5 w-5 text-muted-foreground" />
         </div>
-        <h1 className="font-display text-3xl font-bold">LaTeX AI Editor</h1>
+        <h1 className="font-display text-3xl font-bold">TeXel</h1>
       </div>
       <p className="max-w-md text-center text-muted-foreground text-lg text-balance leading-relaxed">
         Create developer resumes and documents with LaTeX. Edit with AI assistance
@@ -44,7 +45,7 @@ export default function HomePage() {
       <div className="flex flex-col gap-4 sm:flex-row">
         <Button asChild size="lg" className="gap-2">
           <Link href="/sign-in">
-            <LayoutDashboard className="h-4 w-4" />
+            <Image src="/logo/google-icon-logo-svgrepo-com.svg" alt="Google" width={16} height={16} className="h-4 w-4" />
             Sign in with Google
           </Link>
         </Button>
