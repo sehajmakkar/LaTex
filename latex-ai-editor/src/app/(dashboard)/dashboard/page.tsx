@@ -138,7 +138,7 @@ export default function DashboardPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -146,11 +146,13 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex h-14 items-center justify-between border-b px-4">
+      <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 backdrop-blur-md px-4">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <FileCode2 className="h-5 w-5 text-primary" />
-            <span className="font-semibold">LaTeX AI Editor</span>
+            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+              <FileCode2 className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <span className="font-display font-semibold">LaTeX AI Editor</span>
           </Link>
           <span className="text-sm text-muted-foreground">
             {user?.firstName ?? "User"}
@@ -176,7 +178,7 @@ export default function DashboardPage() {
       <main className="flex-1 overflow-auto p-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Your projects</h1>
+            <h1 className="font-display text-xl font-semibold">Your projects</h1>
             <p className="text-sm text-muted-foreground">
               {projects.length} / {FREE_PROJECT_LIMIT} projects (free)
             </p>
@@ -187,7 +189,9 @@ export default function DashboardPage() {
           <Card className="border-dashed">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </div>
                 No projects yet
               </CardTitle>
               <CardDescription>
@@ -223,7 +227,7 @@ export default function DashboardPage() {
                             setEditName("");
                           }
                         }}
-                        className="flex-1 min-w-0 rounded border bg-background px-2 py-1 text-sm font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="flex-1 min-w-0 rounded-xl border border-input bg-background px-2 py-1 text-sm font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring/50"
                         autoFocus
                       />
                     ) : (
@@ -231,7 +235,7 @@ export default function DashboardPage() {
                         <CardTitle className="truncate text-base">
                           <Link
                             href={`/project/${project.id}`}
-                            className="hover:underline"
+                            className="hover:text-foreground/70 transition-colors"
                           >
                             {project.name}
                           </Link>
@@ -239,7 +243,7 @@ export default function DashboardPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                          className="h-8 w-8 shrink-0"
                           onClick={(e) => {
                             e.preventDefault();
                             handleStartRename(project);
@@ -253,7 +257,7 @@ export default function DashboardPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    className="h-8 w-8 shrink-0 hover:text-destructive"
                     onClick={() => handleDelete(project.id)}
                     disabled={deletingId === project.id}
                   >

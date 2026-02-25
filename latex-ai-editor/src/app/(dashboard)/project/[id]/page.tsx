@@ -47,7 +47,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         setContent(data.data.content || DEFAULT_LATEX_CONTENT);
         setProjectName(data.data.name);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         if (!cancelled) setProjectLoaded(true);
       });
@@ -74,7 +74,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
 
   const handleCompile = useCallback(async () => {
     setCompileState({ status: "compiling", startedAt: new Date() });
-    
+
     toast.promise(
       (async () => {
         const response = await fetch("/api/compile", {
@@ -151,7 +151,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         backHref="/dashboard"
         onRename={id !== "new" && UUID_REGEX.test(id) ? handleRename : undefined}
       />
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
+      <ResizablePanelGroup orientation="horizontal" className="flex-1">
         <ResizablePanel defaultSize={55} minSize={30}>
           <EditorPane value={content} onChange={setContent} />
         </ResizablePanel>

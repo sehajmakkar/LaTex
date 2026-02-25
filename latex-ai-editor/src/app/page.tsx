@@ -20,7 +20,7 @@ export default function HomePage() {
 
   if (isLoaded && isSignedIn) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-muted-foreground">Redirecting to dashboard...</p>
       </div>
     );
@@ -31,11 +31,13 @@ export default function HomePage() {
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <div className="flex items-center gap-2">
-        <FileCode2 className="h-8 w-8 text-primary" />
-        <h1 className="text-2xl font-bold">LaTeX AI Editor</h1>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+          <FileCode2 className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <h1 className="font-display text-3xl font-bold">LaTeX AI Editor</h1>
       </div>
-      <p className="max-w-md text-center text-muted-foreground">
+      <p className="max-w-md text-center text-muted-foreground text-lg text-balance leading-relaxed">
         Create developer resumes and documents with LaTeX. Edit with AI assistance
         and compile to PDF. Sign in with Google to get started.
       </p>
@@ -53,7 +55,7 @@ export default function HomePage() {
           </Link>
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground/70">
         Templates and projects require sign-in. You can create up to 3 projects for
         free.
       </p>

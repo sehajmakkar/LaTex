@@ -14,26 +14,26 @@ type TemplateCardProps = {
 
 export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
   return (
-    <article className="group flex h-full flex-col rounded-xs">
+    <article className="group flex h-full flex-col rounded-2xl border border-border bg-card hover:border-ring/50 transition-all duration-300 overflow-hidden">
       {/* Preview image */}
-      <div className="relative w-full shrink-0 overflow-hidden shadow-xl">
+      <div className="relative w-full shrink-0 overflow-hidden">
         <div className="relative aspect-[210/297] w-full">
           <Image
             src={TEMPLATE_PREVIEW_IMAGE}
             alt={`Preview of ${template.name} resume`}
             fill
-            className="object-cover object-top"
+            className="object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         </div>
       </div>
 
       {/* Content below image */}
-      <div className="flex flex-1 flex-col p-1 pt-2">
-        <h3 className="text-base font-semibold tracking-tight text-slate-800 dark:text-slate-100">
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="font-display text-base font-semibold tracking-tight">
           {template.name}
         </h3>
-        <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-400">
+        <p className="line-clamp-2 text-sm text-muted-foreground mt-1">
           {template.description}
         </p>
         <Button

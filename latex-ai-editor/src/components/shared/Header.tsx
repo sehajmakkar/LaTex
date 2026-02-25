@@ -42,7 +42,7 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
   }, [editName, projectName, onRename]);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4">
+    <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 backdrop-blur-md px-4">
       <div className="flex items-center gap-4 min-w-0">
         {backHref && (
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
@@ -52,8 +52,8 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
           </Button>
         )}
         <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-          <h1 className="text-lg font-semibold truncate">LaTeX AI Editor</h1>
+          <Sparkles className="h-5 w-5 shrink-0 text-muted-foreground" />
+          <h1 className="font-display text-lg font-semibold truncate">LaTeX AI Editor</h1>
         </div>
         <span className="text-sm text-muted-foreground shrink-0">/</span>
         {onRename ? (
@@ -70,20 +70,20 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
                   setEditName(projectName);
                 }
               }}
-              className="min-w-[120px] max-w-[240px] rounded border bg-background px-2 py-1 text-sm font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+              className="min-w-[120px] max-w-[240px] rounded-xl border border-input bg-background px-2 py-1 text-sm font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring/50"
               autoFocus
             />
           ) : (
             <button
               type="button"
               onClick={() => setIsEditingName(true)}
-              className="text-sm font-medium truncate hover:underline text-left max-w-[200px]"
+              className="text-sm font-medium truncate hover:underline text-left max-w-[200px] text-foreground/80"
             >
               {projectName}
             </button>
           )
         ) : (
-          <span className="text-sm font-medium truncate">{projectName}</span>
+          <span className="text-sm font-medium truncate text-foreground/80">{projectName}</span>
         )}
       </div>
 
@@ -117,31 +117,31 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
               },
             }}
           />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href="/templates" className="flex items-center gap-2">
-                <FileCode2 className="h-4 w-4" />
-                Resume templates
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/">Home</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">
-              <p className="font-medium mb-1">AI Shortcuts</p>
-              <p>⌘K - Trigger AI Edit</p>
-              <p>⌘Y - Accept Edit</p>
-              <p>⌘U - Reject Edit</p>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/templates" className="flex items-center gap-2">
+                  <FileCode2 className="h-4 w-4" />
+                  Resume templates
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/">Home</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                <p className="font-medium mb-1 text-foreground/60">AI Shortcuts</p>
+                <p>⌘K - Trigger AI Edit</p>
+                <p>⌘Y - Accept Edit</p>
+                <p>⌘U - Reject Edit</p>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

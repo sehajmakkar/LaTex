@@ -27,7 +27,7 @@ type EditorPaneProps = {
 export function EditorPane({ value, onChange, className }: EditorPaneProps) {
   return (
     <div className="flex h-full flex-col bg-background">
-      <div className="flex items-center justify-between border-b px-4 py-2">
+      <div className="flex items-center justify-between border-b border-border bg-background/70 px-4 py-2">
         <span className="text-sm font-medium text-muted-foreground">main.tex</span>
         <TooltipProvider>
           <Tooltip>
@@ -35,16 +35,16 @@ export function EditorPane({ value, onChange, className }: EditorPaneProps) {
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Sparkles className="h-3 w-3" />
                 <span className="hidden sm:inline">AI Edit:</span>
-                <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+                <kbd className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">⌘K</kbd>
               </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-xs">
               <div className="space-y-2 text-xs">
                 <p className="font-medium">AI Inline Edit</p>
                 <div className="space-y-1 text-muted-foreground">
-                  <p><kbd className="rounded bg-muted px-1 py-0.5 font-mono">⌘K</kbd> Select text and trigger AI edit</p>
-                  <p><kbd className="rounded bg-muted px-1 py-0.5 font-mono">⌘Y</kbd> Accept suggested edit</p>
-                  <p><kbd className="rounded bg-muted px-1 py-0.5 font-mono">⌘U</kbd> Reject suggested edit</p>
+                  <p><kbd className="rounded-md bg-muted px-1 py-0.5 font-mono">⌘K</kbd> Select text and trigger AI edit</p>
+                  <p><kbd className="rounded-md bg-muted px-1 py-0.5 font-mono">⌘Y</kbd> Accept suggested edit</p>
+                  <p><kbd className="rounded-md bg-muted px-1 py-0.5 font-mono">⌘U</kbd> Reject suggested edit</p>
                 </div>
               </div>
             </TooltipContent>

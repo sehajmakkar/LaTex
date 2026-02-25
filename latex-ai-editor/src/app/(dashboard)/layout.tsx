@@ -3,5 +3,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="flex h-screen flex-col">{children}</div>;
+  return <div className="flex h-screen flex-col bg-background">{children}</div>;
 }

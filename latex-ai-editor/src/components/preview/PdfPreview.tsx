@@ -9,8 +9,8 @@ type PdfPreviewProps = {
 
 export function PdfPreview({ url, isLoading }: PdfPreviewProps) {
   return (
-    <div className="flex h-full flex-col bg-muted/30">
-      <div className="flex items-center justify-between border-b bg-background px-4 py-2">
+    <div className="flex h-full flex-col bg-background">
+      <div className="flex items-center justify-between border-b border-border bg-background/70 px-4 py-2">
         <span className="text-sm font-medium text-muted-foreground">PDF Preview</span>
         {isLoading && (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -28,7 +28,7 @@ export function PdfPreview({ url, isLoading }: PdfPreviewProps) {
             <FileText className="h-16 w-16 opacity-20" />
             <div className="text-center">
               <p className="font-medium">No PDF generated yet</p>
-              <p className="text-sm">Click &quot;Compile&quot; to generate your PDF</p>
+              <p className="text-sm text-muted-foreground">Click &quot;Compile&quot; to generate your PDF</p>
             </div>
           </div>
         )}

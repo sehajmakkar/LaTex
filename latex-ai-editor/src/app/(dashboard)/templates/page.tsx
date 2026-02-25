@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, FileCode2, Loader2 } from "lucide-react";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { TemplateCard } from "@/components/templates/TemplateCard";
 import { UseTemplateDialog } from "@/components/templates/UseTemplateDialog";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import type { TemplateManifest } from "@/types";
 
 export default function TemplatesPage() {
@@ -39,22 +39,24 @@ export default function TemplatesPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex h-14 items-center justify-between border-b px-4">
+      <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 backdrop-blur-md px-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/project/new">
+            <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div className="flex items-center gap-2">
-            <FileCode2 className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Developer resume templates</h1>
+            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+              <FileCode2 className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <h1 className="font-display text-lg font-semibold">Developer resume templates</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button variant="outline" size="sm" asChild>
-          <Link href="/project/new">Blank project</Link>
+            <Link href="/dashboard">Back to projects</Link>
           </Button>
         </div>
       </header>
@@ -71,7 +73,7 @@ export default function TemplatesPage() {
             <span className="text-sm text-muted-foreground">Loading templates...</span>
           </div>
         ) : templates.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+          <div className="rounded-2xl border border-dashed p-12 text-center text-muted-foreground">
             No templates available.
           </div>
         ) : (
