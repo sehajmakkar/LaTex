@@ -10,7 +10,6 @@
  */
 
 import type { Template, TemplateManifest } from "@/types";
-import { TEMPLATE_TAGS } from "./common";
 export { TEMPLATE_TAGS } from "./common";
 
 // --- Import all templates from tag-based folders ---
