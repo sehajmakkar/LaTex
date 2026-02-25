@@ -191,11 +191,12 @@ export function FeaturesSection() {
                     <Zap className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
                   </motion.div>
                   <p className="font-heading font-semibold text-zinc-100">
-                    Inline AI Editing
+                    Professional Resume Templates
                   </p>
                 </div>
                 <p className="text-zinc-500 text-sm mb-5">
-                  Highlight text to rewrite, refine, or strengthen it instantly.
+                  Choose from a variety of ATS-optimized templates designed to
+                  highlight your strengths and get noticed.
                 </p>
                 <div className="mt-auto">
                   <div className="flex items-baseline gap-2 mb-3">
@@ -247,11 +248,11 @@ export function FeaturesSection() {
                     <Command className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
                   </motion.div>
                   <p className="font-heading font-semibold text-zinc-100">
-                    Professional Templates
+                    Inline AI Editing
                   </p>
                 </div>
                 <p className="text-zinc-500 text-sm mb-5">
-                  Recruiter-approved resume and CV templates, ready to use.
+                  Highlight text to rewrite, refine, or strengthen it instantly.
                 </p>
                 <div className="flex justify-center gap-2 mt-auto">
                   {["⌘", "T"].map((key, i) => (

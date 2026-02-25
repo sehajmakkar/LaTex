@@ -12,7 +12,7 @@ export default function Home() {
     <main className="min-h-screen bg-zinc-950">
       <Navbar />
       <HeroSection />
-      <ImpactSection />
+      {/* <ImpactSection /> */}
       <FeaturesSection />
       <TestimonialsSection />
       <PricingSection />
