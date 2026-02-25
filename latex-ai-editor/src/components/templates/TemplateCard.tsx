@@ -14,9 +14,9 @@ type TemplateCardProps = {
 
 export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
   return (
-    <article className="group flex h-full flex-col rounded-2xl border border-border bg-card hover:border-ring/50 transition-all duration-300 overflow-hidden">
+    <article className="group flex h-full flex-col rounded-md border border-border bg-card hover:border-ring/50 transition-all duration-300 overflow-hidden">
       {/* Preview image */}
-      <div className="relative w-full shrink-0 overflow-hidden">
+      <div className="relative w-full shrink-0 overflow-hidden max-h-96">
         <div className="relative aspect-[210/297] w-full">
           <Image
             src={TEMPLATE_PREVIEW_IMAGE}
@@ -29,17 +29,17 @@ export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
       </div>
 
       {/* Content below image */}
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-base font-semibold tracking-tight">
+      <div className="flex flex-1 flex-col p-3">
+        <h3 className="font-display text-sm font-semibold tracking-tight">
           {template.name}
         </h3>
-        <p className="line-clamp-2 text-sm text-muted-foreground mt-1">
+        <p className="line-clamp-2 text-xs text-muted-foreground mt-0.5 mb-2">
           {template.description}
         </p>
         <Button
-          variant="default"
+          variant="secondary"
           size="sm"
-          className="mt-3 w-full"
+          className="mt-auto w-full h-7 text-xs flex items-center justify-center"
           onClick={() => onUseTemplate(template)}
         >
           Use template

@@ -1,4 +1,16 @@
-export const TECH_LEAD_CONTENT = `\\documentclass[11pt,a4paper]{article}
+import type { TemplateManifest } from "@/types";
+import { COMMON_VARIABLES } from "../common";
+
+export const manifest: TemplateManifest = {
+  id: "tech-lead",
+  name: "Tech Lead",
+  description: "Structured for leadership, management and technical depth.",
+  category: "Developer",
+  tags: ["Leadership"],
+  variables: COMMON_VARIABLES,
+};
+
+export const content = `\\documentclass[11pt,a4paper]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
 \\usepackage{geometry}
@@ -23,7 +35,7 @@ Software engineer and tech lead with X+ years building scalable systems. Led tea
 
 \\section*{Leadership \\& Impact}
 \\noindent\\textbf{Tech Lead / Senior Engineer} \\hfill Company \\hfill 2022 -- Present\\\\
-\\textit{Scope: 3--5 engineers, 2--3 services, \$X impact}
+\\textit{Scope: 3--5 engineers, 2--3 services, \\$X impact}
 \\begin{itemize}
     \\item Led technical direction for [product/area]; delivered [outcome] with measurable impact.
     \\item Drove architecture decisions: migration to Y, adoption of Z; reduced latency/cost by N\\%.

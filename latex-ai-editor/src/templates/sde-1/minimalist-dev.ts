@@ -1,4 +1,16 @@
-export const MINIMALIST_DEV_CONTENT = `\\documentclass[10pt,a4paper]{article}
+import type { TemplateManifest } from "@/types";
+import { COMMON_VARIABLES } from "../common";
+
+export const manifest: TemplateManifest = {
+  id: "minimalist-dev",
+  name: "Minimalist Dev",
+  description: "Minimal design, content-first for senior engineers.",
+  category: "Developer",
+  tags: ["SDE 1", "Single Column"],
+  variables: COMMON_VARIABLES,
+};
+
+export const content = `\\documentclass[10pt,a4paper]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
 \\usepackage{geometry}
@@ -12,7 +24,7 @@ export const MINIMALIST_DEV_CONTENT = `\\documentclass[10pt,a4paper]{article}
 \\begin{document}
 
 \\noindent{\\Large {{name}}}\\\\
-{{email}} \\, $\\cdot$ \\, {{phone}} \\, $\\cdot$ \\, {{location}}\\\
+{{email}} \\, $\\cdot$ \\, {{phone}} \\, $\\cdot$ \\, {{location}}\\
 \\href{https://{{github}}}{GitHub} \\, $\\cdot$ \\, \\href{https://{{linkedin}}}{LinkedIn}
 \\vspace{1em}
 

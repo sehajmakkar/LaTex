@@ -1,4 +1,16 @@
-export const MODERN_TECH_CONTENT = `\\documentclass[11pt,a4paper]{article}
+import type { TemplateManifest } from "@/types";
+import { COMMON_VARIABLES } from "../common";
+
+export const manifest: TemplateManifest = {
+  id: "modern-tech",
+  name: "Modern Tech",
+  description: "Clean single-column layout for software engineers.",
+  category: "Developer",
+  tags: ["Top Picks", "SDE 1", "Single Column"],
+  variables: COMMON_VARIABLES,
+};
+
+export const content = `\\documentclass[11pt,a4paper]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
 \\usepackage{geometry}

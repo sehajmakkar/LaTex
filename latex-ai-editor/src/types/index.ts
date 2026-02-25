@@ -46,6 +46,7 @@ export type TemplateManifest = {
   name: string;
   description: string;
   category: string;
+  tags: string[];
   variables: TemplateVariable[];
 };
 
