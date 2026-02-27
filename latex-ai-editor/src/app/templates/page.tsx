@@ -112,7 +112,7 @@ export default function TemplatesPage() {
               <FileCode2 className="h-4 w-4 text-muted-foreground" />
             </div>
             <h1 className="font-display text-lg font-semibold">
-              Developer resume templates
+              Resume Templates
             </h1>
           </div>
 
