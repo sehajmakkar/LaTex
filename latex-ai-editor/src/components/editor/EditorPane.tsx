@@ -35,16 +35,25 @@ export function EditorPane({ value, onChange, className }: EditorPaneProps) {
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Sparkles className="h-3 w-3" />
                 <span className="hidden sm:inline">AI Edit:</span>
-                <kbd className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">⌘K</kbd>
+                <kbd className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">⌘ K</kbd>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs">
-              <div className="space-y-2 text-xs">
-                <p className="font-medium">AI Inline Edit</p>
-                <div className="space-y-1 text-muted-foreground">
-                  <p><kbd className="rounded-md bg-muted px-1 py-0.5 font-mono">⌘K</kbd> Select text and trigger AI edit</p>
-                  <p><kbd className="rounded-md bg-muted px-1 py-0.5 font-mono">⌘Y</kbd> Accept suggested edit</p>
-                  <p><kbd className="rounded-md bg-muted px-1 py-0.5 font-mono">⌘U</kbd> Reject suggested edit</p>
+            <TooltipContent side="bottom" className="max-w-xs bg-background text-foreground border border-border shadow-md p-3 [&>svg]:hidden">
+              <div className="space-y-3 text-xs">
+                <p className="font-medium text-sm">AI Inline Edit</p>
+                <div className="space-y-2.5 text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <kbd className="min-w-[24px] rounded-md border border-border bg-muted px-1.5 py-0.5 text-center font-mono text-[10px] font-medium text-foreground shadow-sm">⌘ K</kbd>
+                    <span>Select text and trigger AI edit</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="min-w-[24px] rounded-md border border-border bg-muted px-1.5 py-0.5 text-center font-mono text-[10px] font-medium text-foreground shadow-sm">⌘ Y</kbd>
+                    <span>Accept suggested edit</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="min-w-[24px] rounded-md border border-border bg-muted px-1.5 py-0.5 text-center font-mono text-[10px] font-medium text-foreground shadow-sm">⌘ U</kbd>
+                    <span>Reject suggested edit</span>
+                  </div>
                 </div>
               </div>
             </TooltipContent>

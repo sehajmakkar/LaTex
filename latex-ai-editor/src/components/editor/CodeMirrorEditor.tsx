@@ -79,6 +79,11 @@ async function handleAIPrompt({
   return result;
 }
 
+// IMPORTANT: CSS variables in globals.css are full oklch() values
+// (e.g. --foreground: oklch(0.145 0 0)), so reference them as var(--x) directly.
+// Do NOT wrap in hsl() — that only works when the variable stores bare "H S% L%" channels.
+// For alpha variants, use color-mix(in oklch, var(--x) N%, transparent).
+
 export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -95,101 +100,215 @@ export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEdito
   useEffect(() => {
     if (!editorRef.current) return;
 
-    const theme = EditorView.theme({
+    // ── Editor chrome ────────────────────────────────────────────────────────
+    const editorTheme = EditorView.theme({
       "&": {
         height: "100%",
         fontSize: "14px",
       },
       ".cm-scroller": {
-        fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
+        fontFamily: "var(--font-mono), ui-monospace, monospace",
         overflow: "auto",
       },
       ".cm-content": {
         padding: "16px 0",
+        caretColor: "var(--foreground)",
       },
       ".cm-line": {
         padding: "0 16px",
       },
       ".cm-gutters": {
-        backgroundColor: "hsl(var(--muted))",
-        color: "hsl(var(--muted-foreground))",
+        backgroundColor: "var(--muted)",
+        color: "var(--muted-foreground)",
         border: "none",
         paddingRight: "8px",
       },
       ".cm-activeLineGutter": {
-        backgroundColor: "hsl(var(--accent))",
+        backgroundColor: "var(--accent)",
       },
       ".cm-activeLine": {
-        backgroundColor: "hsl(var(--accent) / 0.5)",
+        backgroundColor: "color-mix(in oklch, var(--accent) 50%, transparent)",
       },
       ".cm-selectionBackground": {
-        backgroundColor: "hsl(var(--primary) / 0.2) !important",
+        backgroundColor: "color-mix(in oklch, var(--primary) 20%, transparent) !important",
       },
       "&.cm-focused .cm-selectionBackground": {
-        backgroundColor: "hsl(var(--primary) / 0.3) !important",
+        backgroundColor: "color-mix(in oklch, var(--primary) 30%, transparent) !important",
       },
-      ".cm-cursor": {
-        borderLeftColor: "hsl(var(--foreground))",
-      },
-      ".cm-ai-input": {
-        backgroundColor: "hsl(var(--background))",
-        border: "1px solid hsl(var(--border))",
-        borderRadius: "6px",
-        padding: "8px 12px",
-        fontSize: "14px",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-        minWidth: "300px",
-      },
-      ".cm-ai-input:focus": {
-        outline: "none",
-        borderColor: "hsl(var(--primary))",
-        boxShadow: "0 0 0 2px hsl(var(--primary) / 0.2)",
-      },
-      ".cm-ai-suggestion": {
-        backgroundColor: "hsl(var(--accent) / 0.3)",
-        borderLeft: "2px solid hsl(var(--primary))",
-      },
-      ".cm-ai-actions": {
-        display: "flex",
-        gap: "4px",
-        marginTop: "4px",
-      },
-      ".cm-ai-accept, .cm-ai-reject": {
-        padding: "4px 8px",
-        borderRadius: "4px",
-        fontSize: "12px",
-        cursor: "pointer",
-        border: "none",
-      },
-      ".cm-ai-accept": {
-        backgroundColor: "hsl(var(--primary))",
-        color: "hsl(var(--primary-foreground))",
-      },
-      ".cm-ai-reject": {
-        backgroundColor: "hsl(var(--muted))",
-        color: "hsl(var(--muted-foreground))",
+      "&.cm-focused .cm-cursor": {
+        borderLeftColor: "var(--foreground)",
+        borderLeftWidth: "2px",
       },
     });
 
+    // ── AI tooltip / panel ───────────────────────────────────────────────────
+    // @marimo-team/codemirror-ai uses EditorView.baseTheme() (lower precedence).
+    // EditorView.theme() always wins over baseTheme.
     const aiTheme = EditorView.theme({
-      ".cm-ai-panel": {
-        position: "absolute",
-        zIndex: 100,
-        backgroundColor: "hsl(var(--popover))",
-        border: "1px solid hsl(var(--border))",
-        borderRadius: "8px",
-        padding: "12px",
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
-        maxWidth: "400px",
+      ".cm-tooltip.cm-ai-tooltip": {
+        backgroundColor: "var(--popover)",
+        border: "1px solid var(--border)",
+        borderRadius: "12px",
+        padding: "0",
+        boxShadow: "0 8px 32px color-mix(in oklch, var(--foreground) 12%, transparent), 0 2px 8px color-mix(in oklch, var(--foreground) 6%, transparent)",
+        overflow: "hidden",
+        minWidth: "320px",
+        maxWidth: "480px",
+      },
+      ".cm-ai-input-wrapper": {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "10px 14px",
+        backgroundColor: "var(--popover)",
+      },
+      ".cm-ai-input": {
+        flex: "1",
+        background: "transparent",
+        border: "none",
+        outline: "none",
+        fontSize: "13px",
+        lineHeight: "1.5",
+        color: "var(--popover-foreground)",
+        caretColor: "var(--foreground)",
+        fontFamily: "inherit",
+        padding: "0",
+        width: "100%",
+      },
+      ".cm-ai-input::placeholder": {
+        color: "var(--muted-foreground)",
+      },
+      ".cm-tooltip.cm-ai-tooltip:focus-within": {
+        borderColor: "var(--ring)",
+        boxShadow: "0 8px 32px color-mix(in oklch, var(--foreground) 12%, transparent), 0 0 0 2px color-mix(in oklch, var(--ring) 25%, transparent)",
       },
       ".cm-ai-diff-added": {
-        backgroundColor: "hsl(142 76% 36% / 0.2)",
-        color: "hsl(142 76% 36%)",
+        backgroundColor: "oklch(0.55 0.15 145 / 0.15)",
+        color: "oklch(0.6 0.15 145)",
       },
       ".cm-ai-diff-removed": {
-        backgroundColor: "hsl(0 84% 60% / 0.2)",
-        color: "hsl(0 84% 60%)",
+        backgroundColor: "oklch(0.6 0.2 27 / 0.12)",
+        color: "oklch(0.6 0.2 27)",
         textDecoration: "line-through",
+        textDecorationColor: "oklch(0.6 0.2 27 / 0.6)",
+      },
+      ".cm-ai-actions": {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "8px 14px",
+        borderTop: "1px solid var(--border)",
+        backgroundColor: "color-mix(in oklch, var(--muted) 40%, transparent)",
+      },
+      ".cm-ai-accept": {
+        padding: "4px 12px",
+        borderRadius: "6px",
+        fontSize: "12px",
+        fontWeight: "500",
+        cursor: "pointer",
+        border: "none",
+        backgroundColor: "var(--primary)",
+        color: "var(--primary-foreground)",
+        transition: "opacity 0.15s",
+      },
+      ".cm-ai-accept:hover": {
+        opacity: "0.85",
+      },
+      ".cm-ai-reject": {
+        padding: "4px 12px",
+        borderRadius: "6px",
+        fontSize: "12px",
+        fontWeight: "500",
+        cursor: "pointer",
+        border: "1px solid var(--border)",
+        backgroundColor: "transparent",
+        color: "var(--muted-foreground)",
+        transition: "background-color 0.15s, color 0.15s",
+      },
+      ".cm-ai-reject:hover": {
+        backgroundColor: "var(--muted)",
+        color: "var(--foreground)",
+      },
+      ".cm-ai-keybinding": {
+        marginLeft: "auto",
+        fontSize: "11px",
+        color: "var(--muted-foreground)",
+        display: "flex",
+        gap: "4px",
+        alignItems: "center",
+      },
+      ".cm-ai-keybinding kbd": {
+        padding: "1px 5px",
+        borderRadius: "4px",
+        backgroundColor: "var(--muted)",
+        border: "1px solid var(--border)",
+        fontFamily: "var(--font-mono), ui-monospace, monospace",
+        fontSize: "10px",
+        color: "var(--muted-foreground)",
+      },
+      ".cm-ai-loading": {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "10px 14px",
+        fontSize: "13px",
+        color: "var(--muted-foreground)",
+      },
+      ".cm-ai-selection": {
+        backgroundColor: "color-mix(in oklch, var(--primary) 8%, transparent)",
+        borderLeft: "2px solid color-mix(in oklch, var(--primary) 40%, transparent)",
+      },
+
+      // ── Generic tooltip catch-all ─────────────────────────────────────────
+      ".cm-tooltip": {
+        border: "1px solid var(--border)",
+        borderRadius: "8px",
+        backgroundColor: "var(--popover)",
+        color: "var(--popover-foreground)",
+      },
+
+      // ── Autocomplete / intellisense dropdown ──────────────────────────────
+      // Must come after the catch-all so the double-class specificity wins
+      ".cm-tooltip.cm-tooltip-autocomplete": {
+        backgroundColor: "var(--popover)",
+        border: "1px solid var(--border)",
+        borderRadius: "8px",
+        boxShadow: "0 4px 16px color-mix(in oklch, var(--foreground) 10%, transparent)",
+        padding: "4px",
+        overflow: "hidden",
+      },
+      ".cm-tooltip-autocomplete ul": {
+        backgroundColor: "transparent",
+        fontFamily: "var(--font-mono), ui-monospace, monospace",
+        fontSize: "13px",
+        maxHeight: "240px",
+        overflowY: "auto",
+      },
+      ".cm-tooltip-autocomplete ul li": {
+        color: "var(--popover-foreground)",
+        borderRadius: "4px",
+        padding: "4px 8px",
+      },
+      ".cm-tooltip-autocomplete ul li[aria-selected='true']": {
+        backgroundColor: "var(--accent)",
+        color: "var(--accent-foreground)",
+      },
+      ".cm-completionIcon": {
+        color: "var(--muted-foreground)",
+        opacity: "0.7",
+      },
+      ".cm-completionLabel": {
+        color: "var(--popover-foreground)",
+      },
+      ".cm-completionMatchedText": {
+        color: "var(--primary)",
+        fontWeight: "600",
+        textDecoration: "none",
+      },
+      ".cm-completionDetail": {
+        color: "var(--muted-foreground)",
+        fontSize: "12px",
+        marginLeft: "8px",
       },
     });
 
@@ -208,7 +327,7 @@ export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEdito
         highlightSelectionMatches(),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         latex(),
-        theme,
+        editorTheme,
         aiTheme,
         aiExtension({
           prompt: async (opts) => {
@@ -230,7 +349,7 @@ export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEdito
           onError: (error) => {
             console.error("AI extension error:", error);
             toast.error("AI Error", {
-              description: error instanceof Error ? error.message : "An error occurred"
+              description: error instanceof Error ? error.message : "An error occurred",
             });
           },
           keymaps: {
