@@ -2,23 +2,19 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const LATEX_SYSTEM_PROMPT = `You are an expert LaTeX editor assistant. Your task is to modify LaTeX code based on user instructions.
+const LATEX_SYSTEM_PROMPT = `You are an expert LaTeX editor. You receive a fragment of LaTeX source and a user instruction, and you output the rewritten fragment.
 
-CRITICAL RULES:
-1. Return ONLY the replacement code - no explanations, no markdown code blocks, no extra text
-2. Preserve the document structure and formatting style
-3. Use valid LaTeX commands and syntax
-4. Maintain consistent indentation with the surrounding code
-5. If adding new packages, only include the \\usepackage command if absolutely necessary
-6. Keep the same document class and style unless explicitly asked to change it
+OUTPUT RULES — FOLLOW EXACTLY:
+- Output raw LaTeX only. No markdown. No code fences. No backticks. No \`\`\`latex. No \`\`\`.
+- Do not explain anything. Do not add comments unless the user asks for comments.
+- Do not include anything before or after the replacement code.
+- Your entire response must be valid LaTeX that can be pasted directly into a .tex file.
 
-You will receive:
-- The selected code to modify
-- Code before the selection (for context)
-- Code after the selection (for context)
-- The user's instruction
-
-Respond with ONLY the replacement text that should replace the selected code.`;
+EDITING RULES:
+- Preserve indentation and formatting style of the surrounding code.
+- Only introduce \\usepackage{} if it is strictly required by the change.
+- Do not change the document class or global structure unless explicitly asked.
+- If the instruction is ambiguous, make the most minimal change that satisfies it.`;
 
 export type AIEditRequest = {
   selection: string;
@@ -31,14 +27,22 @@ export type AIEditResponse = {
   replacement: string;
 };
 
+function stripCodeFences(text: string): string {
+  const stripped = text
+    .trim()
+    .replace(/^```(?:latex|tex)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+  return stripped;
+}
+
 class AIService {
   private getModel() {
     return genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: LATEX_SYSTEM_PROMPT,
       generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 2000,
+        temperature: 0.2,
       },
     });
   }
@@ -48,7 +52,8 @@ class AIService {
     const model = this.getModel();
 
     const result = await model.generateContent(userMessage);
-    const replacement = result.response.text().trim() || request.selection;
+    const raw = result.response.text().trim() || request.selection;
+    const replacement = stripCodeFences(raw);
 
     return { replacement };
   }
@@ -59,33 +64,53 @@ class AIService {
 
     const result = await model.generateContentStream(userMessage);
 
+    let buffer = "";
+    let headerStripped = false;
+
     for await (const chunk of result.stream) {
       const content = chunk.text();
-      if (content) {
-        yield content;
+      if (!content) continue;
+
+      if (!headerStripped) {
+        // Accumulate until we can safely strip the opening fence
+        buffer += content;
+
+        // Wait until we have enough to detect and strip the opening fence
+        const fenceMatch = buffer.match(/^```(?:latex|tex)?\s*\n?/i);
+        if (fenceMatch) {
+          buffer = buffer.slice(fenceMatch[0].length);
+          headerStripped = true;
+          if (buffer) yield buffer;
+          buffer = "";
+        } else if (buffer.length > 20) {
+          // No fence found after 20 chars — output as-is
+          headerStripped = true;
+          yield buffer;
+          buffer = "";
+        }
+        continue;
       }
+
+      yield content;
+    }
+
+    // Flush remaining buffer (strip trailing fence if present)
+    if (buffer) {
+      yield stripCodeFences(buffer);
     }
   }
 
   private buildUserMessage(request: AIEditRequest): string {
-    return `SELECTED CODE TO MODIFY:
-\`\`\`latex
-${request.selection}
-\`\`\`
-
-CODE BEFORE SELECTION:
-\`\`\`latex
+    return `CONTEXT BEFORE SELECTION:
 ${request.codeBefore.slice(-500)}
-\`\`\`
 
-CODE AFTER SELECTION:
-\`\`\`latex
+SELECTED CODE (replace this):
+${request.selection}
+
+CONTEXT AFTER SELECTION:
 ${request.codeAfter.slice(0, 500)}
-\`\`\`
 
-USER INSTRUCTION: ${request.prompt}
-
-Remember: Return ONLY the replacement code, nothing else.`;
+INSTRUCTION: ${request.prompt}`;
   }
 }
 
