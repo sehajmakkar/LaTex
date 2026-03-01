@@ -9,7 +9,7 @@ export default function LightRaysWrapper() {
       raysColor="#ffffff"
       raysSpeed={1}
       lightSpread={0.5}
-      rayLength={3}
+      rayLength={2}
       followMouse={true}
       mouseInfluence={0.1}
       noiseAmount={0}
