@@ -124,9 +124,9 @@ In your `vercel.json` (create this file in the project root):
   "buildCommand": "npm run build",
   "functions": {
     "src/app/api/compile/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 65
     },
-    "src/app/api/ai/route.ts": {
+    "src/app/api/ai/edit/route.ts": {
       "maxDuration": 30
     }
   }
@@ -355,6 +355,7 @@ app.listen(PORT, () => {
 
 ```dockerfile
 # Stage 1: TeX Live base (cached, rarely changes)
+# Alpine 3.19+; texmf-dist-lang required for pdflatex format generation
 FROM alpine:3.19 AS texlive-base
 
 RUN apk add --no-cache \
@@ -547,9 +548,12 @@ export async function POST(req: NextRequest) {
 }
 ```
 
+> [!NOTE]
+> **Alpine TeX Live:** `texmf-dist-lang` is required for pdflatex format generation on Alpine. If xelatex fails with font errors, add `texmf-dist-fontsrecommended-examples` to the `apk add` list.
+
 #### New Environment Variables Required
 
-Add to your `.env` and production config:
+Add to your `.env` and production config. Also add `LATEX_SERVICE_URL` and `LATEX_API_SECRET` to `src/lib/env.ts` (server schema and runtimeEnv) so the app validates them. When `LATEX_SERVICE_URL` is set, the compile route uses the remote service; when unset (local dev with MacTeX), the route can keep using local `pdflatex` if you add a branch in the route.
 
 ```bash
 # LaTeX Compilation Service
@@ -583,7 +587,21 @@ Railway is simpler but slightly more expensive ($5/mo base + usage).
 
 ---
 
-### Option C: AWS Lambda + Docker (Most Scalable, More Complex)
+### Option C: Render.com (Docker Web Service)
+
+You can run the same Docker image on Render:
+
+1. Create a [Render](https://render.com) account and connect your repo.
+2. **New → Web Service**, select the repo, set **Root Directory** to `latex-service`.
+3. **Environment**: Docker. Render will use the `Dockerfile` in `latex-service/`.
+4. Set env vars: `LATEX_API_SECRET`, `COMPILE_TIMEOUT_MS` (optional).
+5. **Plan**: Free tier has spin-down; paid starts around $7/mo for always-on.
+
+Render gives a URL like `https://texel-latex-compiler.onrender.com`. Use this as `LATEX_SERVICE_URL`. Cold starts on free tier can be 30–60 seconds.
+
+---
+
+### Option D: AWS Lambda + Docker (Most Scalable, More Complex)
 
 For >1000 concurrent compilations. Uses AWS Lambda with container images:
 
@@ -600,14 +618,14 @@ For >1000 concurrent compilations. Uses AWS Lambda with container images:
 ### Compilation Option Comparison
 
 
-|                      | **Fly.io**            | **Railway**    | **AWS Lambda**      |
-| -------------------- | --------------------- | -------------- | ------------------- |
-| Setup complexity     | Low                   | Very Low       | High                |
-| Cold start           | ~2-3s                 | ~5s            | ~10-15s             |
-| Cost at low traffic  | $0-5/mo               | $5-10/mo       | ~$0/mo              |
-| Cost at high traffic | $10-30/mo             | $15-40/mo      | Pay per request     |
-| Scaling              | Manual (add machines) | Auto-scale     | Infinite auto-scale |
-| Best for             | **v1 launch**         | Quick and easy | Scale-up later      |
+|                      | **Fly.io**            | **Railway**    | **Render**        | **AWS Lambda**      |
+| -------------------- | --------------------- | -------------- | ----------------- | ------------------- |
+| Setup complexity     | Low                   | Very Low       | Low               | High                |
+| Cold start           | ~2-3s                 | ~5s            | ~30-60s           | ~10-15s             |
+| Cost at low traffic  | $0-5/mo               | $5-10/mo       | $7/mo (free tier) | ~$0/mo              |
+| Cost at high traffic | $10-30/mo             | $15-40/mo      | $25-50/mo         | Pay per request     |
+| Scaling              | Manual (add machines) | Auto-scale     | Auto-scale        | Infinite auto-scale |
+| Best for             | **v1 launch**         | Quick and easy | All-in-one stack  | Scale-up later      |
 
 
 ---
@@ -617,7 +635,7 @@ For >1000 concurrent compilations. Uses AWS Lambda with container images:
 No deployment changes needed. Your `ai-service.ts` already calls the Gemini API remotely. Just ensure:
 
 1. **Production API key**: Get a production Gemini API key from [Google AI Studio](https://aistudio.google.com)
-2. **Rate limiting**: Add rate limiting to `src/app/api/ai/route.ts` to prevent abuse
+2. **Rate limiting**: Add rate limiting to `src/app/api/ai/edit/route.ts` to prevent abuse
 3. **Set the env var**: `GEMINI_API_KEY=your-production-key`
 
 ---
@@ -715,8 +733,9 @@ jobs:
   # ── Deploy LaTeX Service to Fly.io ──
   deploy-latex:
     runs-on: ubuntu-latest
-    # Only deploy if files in latex-service/ changed
-    if: contains(github.event.head_commit.modified, 'latex-service/')
+    if: ${{ github.event_name == 'push' }}
+    paths:
+      - 'latex-service/**'
     steps:
       - uses: actions/checkout@v4
 
