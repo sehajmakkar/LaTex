@@ -152,6 +152,9 @@ export default function DashboardPage() {
         rightContent={
           <>
             <Button variant="outline" size="sm" asChild>
+              <Link href="/ats">ATS score</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
               <Link href="/billing" className="gap-2">
                 <CreditCard className="h-3.5 w-3.5" />
                 Billing

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Play, FileDown, Settings, Sparkles, FileCode2, ArrowLeft } from "lucide-react";
+import { Play, FileDown, Settings, Sparkles, FileCode2, ArrowLeft, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -130,6 +130,12 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
                   Resume templates
                 </Link>
               </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/ats" className="flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    ATS score
+                  </Link>
+                </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/">Home</Link>
               </DropdownMenuItem>

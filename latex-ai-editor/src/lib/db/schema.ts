@@ -44,6 +44,24 @@ export const userUsage = pgTable("user_usage", {
   date: date("date").notNull(),
   compiles: integer("compiles").notNull().default(0),
   aiEdits: integer("ai_edits").notNull().default(0),
+  atsScans: integer("ats_scans").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const atsReports = pgTable("ats_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .references(() => users.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
+  source: text("source").notNull(), // "editor" | "upload_pdf" | "upload_docx" | "upload_txt"
+  resumeText: text("resume_text").notNull(),
+  score: integer("score").notNull(), // primary display score (combined or parse)
+  parseScore: integer("parse_score").notNull(),
+  qualityScore: integer("quality_score").notNull(),
+  report: text("report").notNull(), // JSON string of full combined report
+  jobDescription: text("job_description"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -55,3 +73,5 @@ export type Compilation = typeof compilations.$inferSelect;
 export type NewCompilation = typeof compilations.$inferInsert;
 export type UserUsage = typeof userUsage.$inferSelect;
 export type NewUserUsage = typeof userUsage.$inferInsert;
+export type ATSReport = typeof atsReports.$inferSelect;
+export type NewATSReport = typeof atsReports.$inferInsert;
