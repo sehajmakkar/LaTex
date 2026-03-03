@@ -23,9 +23,12 @@ export async function GET() {
     const clerkUser = await currentUser();
     const email = clerkUser?.emailAddresses?.[0]?.emailAddress ?? "";
     const name = clerkUser?.fullName ?? null;
-    await userService.ensureUser(userId, email, name);
+    const user = await userService.ensureUser(userId, email, name);
     const projects = await projectService.getByUserId(userId);
-    return NextResponse.json({ data: projects });
+    return NextResponse.json({
+      data: projects,
+      plan: user?.plan ?? "free",
+    });
   } catch (error) {
     console.error("Error fetching projects:", error);
     return NextResponse.json(

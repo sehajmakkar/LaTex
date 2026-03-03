@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileCode2, FileText, Plus, Loader2, Trash2, Pencil } from "lucide-react";
+import { FileCode2, FileText, Plus, Loader2, Trash2, Pencil, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [plan, setPlan] = useState<string>("free");
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -42,8 +43,9 @@ export default function DashboardPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to fetch");
-      const { data } = await res.json();
-      setProjects(data);
+      const json = await res.json();
+      setProjects(json.data ?? []);
+      setPlan(json.plan ?? "free");
     } catch {
       setProjects([]);
     } finally {
@@ -58,7 +60,7 @@ export default function DashboardPage() {
   }, [isLoaded, fetchProjects]);
 
   const handleNewProject = useCallback(async () => {
-    if (projects.length >= FREE_PROJECT_LIMIT) {
+    if (plan === "free" && projects.length >= FREE_PROJECT_LIMIT) {
       toast.error(
         `Free accounts are limited to ${FREE_PROJECT_LIMIT} projects. Delete one to create a new one.`
       );
@@ -89,7 +91,7 @@ export default function DashboardPage() {
     } finally {
       setCreating(false);
     }
-  }, [projects.length, router]);
+  }, [plan, projects.length, router]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -161,6 +163,12 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button variant="outline" size="sm" asChild>
+            <Link href="/billing" className="gap-2">
+              <CreditCard className="h-3.5 w-3.5" />
+              Billing
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link href="/templates">Templates</Link>
           </Button>
           <Button size="sm" onClick={handleNewProject} disabled={creating} className="gap-2">
@@ -180,7 +188,9 @@ export default function DashboardPage() {
           <div>
             <h1 className="font-display text-xl font-semibold">Your projects</h1>
             <p className="text-sm text-muted-foreground">
-              {projects.length} / {FREE_PROJECT_LIMIT} projects (free)
+              {plan === "free"
+                ? `${projects.length} / ${FREE_PROJECT_LIMIT} projects (free)`
+                : `${projects.length} projects (${plan})`}
             </p>
           </div>
         </div>

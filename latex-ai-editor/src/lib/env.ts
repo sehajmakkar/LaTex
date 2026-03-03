@@ -10,6 +10,13 @@ export const env = createEnv({
     GEMINI_API_KEY: z.string().optional(),
     OPENAI_API_KEY: z.string().optional(),
     CLERK_SECRET_KEY: z.string().optional(),
+    DODO_PAYMENTS_API_KEY: z.string().optional(),
+    DODO_PAYMENTS_ENVIRONMENT: z
+      .enum(["test_mode", "live_mode"])
+      .default("test_mode"),
+    DODO_PAYMENTS_WEBHOOK_KEY: z.string().optional(),
+    DODO_PRODUCT_ID_PRO: z.string().optional(),
+    DODO_PRODUCT_ID_PRO_PLUS: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
@@ -23,6 +30,11 @@ export const env = createEnv({
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    DODO_PAYMENTS_API_KEY: process.env.DODO_PAYMENTS_API_KEY,
+    DODO_PAYMENTS_ENVIRONMENT: process.env.DODO_PAYMENTS_ENVIRONMENT,
+    DODO_PAYMENTS_WEBHOOK_KEY: process.env.DODO_PAYMENTS_WEBHOOK_KEY,
+    DODO_PRODUCT_ID_PRO: process.env.DODO_PRODUCT_ID_PRO,
+    DODO_PRODUCT_ID_PRO_PLUS: process.env.DODO_PRODUCT_ID_PRO_PLUS,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

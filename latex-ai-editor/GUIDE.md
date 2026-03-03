@@ -15,6 +15,7 @@ This guide walks you through setting up and testing the Phase 1 implementation.
 7. [Troubleshooting](#troubleshooting)
 8. [Phase 2: AI Inline Edits](#phase-2-ai-inline-edits)
 9. [Phase 3: Resume Templates](#phase-3-resume-templates-developer--tech)
+10. [Dodo Payments (Billing) setup and testing](#dodo-payments-billing-setup-and-testing)
 
 ---
 
@@ -275,11 +276,11 @@ Restart the dev server after changing env.
 
 ### Database tables for Phase 4 (and Phase 5 billing)
 
-- **users** – Clerk user id, email, name, `plan` (free/pro), `stripeCustomerId`, `stripeSubscriptionId`, `subscriptionStatus`. Used for project limit and future billing.
-- **user_usage** – Daily usage (compiles, ai_edits) for future rate limits and billing.
+- **users** – Clerk user id, email, name, `plan` (free/pro/pro_plus), `dodoCustomerId`, `dodoSubscriptionId`, `subscriptionStatus`. Used for project limit and billing (Dodo Payments).
+- **user_usage** – Daily usage (compiles, ai_edits) for future rate limits.
 - **projects** – `userId` links to `users.id` (Clerk id). Only the owner can view/edit/delete.
 
-Stripe integration (checkout, webhooks, customer portal) is planned for Phase 5.
+Billing is implemented with **Dodo Payments** (see [Dodo Payments setup](#dodo-payments-billing-setup-and-testing)).
 
 ---
 
@@ -627,12 +628,106 @@ Four developer-focused resume templates are available: **Modern Tech**, **Minima
 
 ---
 
+## Dodo Payments (Billing) setup and testing
+
+Billing uses **Dodo Payments** so the app can accept subscriptions in regions where Stripe is not available (e.g. India). This section covers dashboard setup, environment variables, and how to test checkout and webhooks.
+
+### 1. Dodo Payments dashboard setup
+
+1. **Sign up / log in** at [Dodo Payments](https://dodopayments.com) and open the dashboard.
+2. **API key**
+   - Go to **Settings** (or **Developers**) and create or copy an **API key**.
+   - Use **Test mode** for development.
+3. **Products (subscription plans)**
+   - Create two **subscription products** (e.g. “Pro” and “Pro Plus”) with the billing interval you want (monthly/yearly).
+   - Copy each product’s **Product ID** (e.g. `prod_xxx`). You will use these in env as `DODO_PRODUCT_ID_PRO` and `DODO_PRODUCT_ID_PRO_PLUS`.
+4. **Webhook**
+   - Go to **Settings → Webhooks** and click **Add webhook**.
+   - **Endpoint URL:**  
+     - Local: use a tunnel (e.g. [ngrok](https://ngrok.com)) and set the URL to `https://YOUR_NGROK_URL/api/webhooks/dodo`.  
+     - Production: `https://YOUR_DOMAIN/api/webhooks/dodo`.
+   - **Subscribed events:** enable at least:
+     - `subscription.active`
+     - `subscription.updated`
+     - `subscription.renewed`
+     - `subscription.on_hold`
+     - `subscription.failed`
+     - `subscription.cancelled`
+     - `subscription.expired`
+   - Save and copy the **Webhook secret key** (used as `DODO_PAYMENTS_WEBHOOK_KEY`).  
+   - Dodo follows [Standard Webhooks](https://standardwebhooks.com/); the app verifies signatures with this secret.
+
+### 2. Environment variables
+
+Add to `.env` (or your host’s env):
+
+```env
+# Dodo Payments (billing)
+DODO_PAYMENTS_API_KEY=your_api_key_here
+DODO_PAYMENTS_ENVIRONMENT=test_mode
+DODO_PAYMENTS_WEBHOOK_KEY=your_webhook_secret_here
+DODO_PRODUCT_ID_PRO=prod_xxx_pro
+DODO_PRODUCT_ID_PRO_PLUS=prod_xxx_pro_plus
+
+# App URL (used for checkout return URL)
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+- **Production:** set `DODO_PAYMENTS_ENVIRONMENT=live_mode` and use live API key and webhook secret. Create the same products in live mode and set the same env keys to the live product IDs.
+
+### 3. Database
+
+The app already has `dodo_customer_id` and `dodo_subscription_id` on `users`. If you added them manually, run:
+
+```bash
+npm run db:push
+```
+
+### 4. Testing checkout (test mode)
+
+1. Start the app and sign in (Clerk).
+2. Open **Dashboard** and click **Billing** (or go to `/billing`).
+3. You should see **Current plan: free** and **Upgrade to Pro** / **Upgrade to Pro Plus**.
+4. Click **Upgrade to Pro** (or Pro Plus). You should be redirected to Dodo’s checkout page (test mode).
+5. Complete the test payment (use Dodo’s test card/details if documented).
+6. You should be redirected back to `/billing/success`. After the webhook is received, your plan on **Billing** and **Dashboard** should update to **pro** or **pro_plus** (and project limit becomes unlimited for paid plans).
+
+If checkout does not open, check:
+
+- `DODO_PAYMENTS_API_KEY` and `DODO_PRODUCT_ID_*` are set.
+- Browser console and server logs for errors (e.g. 503 “Billing not configured”).
+
+### 5. Testing webhooks (local)
+
+Webhooks must be sent to a public URL. For local development:
+
+1. **Expose your app** with ngrok (or similar):
+   ```bash
+   ngrok http 3000
+   ```
+2. **Set webhook URL in Dodo** to `https://YOUR_NGROK_HOST/api/webhooks/dodo` (see step 1 above).
+3. **Optional:** Ensure `NEXT_PUBLIC_APP_URL` matches what you use in the browser (e.g. `http://localhost:3000`); the return URL after payment uses this.
+4. **Trigger a subscription event** (e.g. complete a test checkout). Dodo will POST to your webhook.
+5. **Verify:** Check your server logs for the webhook request. The handler returns `200` after verifying the signature and updating the user’s `plan` and `subscriptionStatus`. You can also use **Dodo Dashboard → Webhooks** to “Send example” for a subscription event to confirm your endpoint responds with 2xx.
+
+If the webhook returns 401:
+
+- `DODO_PAYMENTS_WEBHOOK_KEY` must match the secret shown in Dodo for this webhook endpoint.
+- The handler uses the raw request body for verification; do not modify the body before it reaches the route.
+
+### 6. API reference (billing)
+
+- `GET /api/billing/me` – Returns current user’s `plan` and `subscriptionStatus` (requires auth).
+- `POST /api/billing/checkout` – Body `{ "plan": "pro" | "pro_plus" }`. Returns `{ "data": { "checkout_url": "..." } }`; redirect the user to this URL (requires auth).
+- `POST /api/webhooks/dodo` – Dodo webhook endpoint (no auth; verified via Standard Webhooks signature).
+
+---
+
 ## Next Steps
 
-Phases 1–3 are complete. Next:
+Phases 1–4 and billing (Dodo Payments) are in place. Next:
 
-- **Phase 4:** User auth and billing
-- **Phase 5:** Performance optimizations
+- **Phase 5:** Performance optimizations and any product-specific features.
 
 ---
 
