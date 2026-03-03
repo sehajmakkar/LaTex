@@ -1,10 +1,8 @@
 export const DEFAULT_LATEX_CONTENT = String.raw`
-%-------------------------
-% Resume in Latex
-% Author : Jake Gutierrez
-% Based off of: https://github.com/sb2nov/resume
-% License : MIT
-%------------------------
+% Welcome to TeXel! 
+% Edit this template in the left pane. Use Compile to build the PDF, then Download to save as a PDF.
+% AI inline edit — select text, then ⌘K to trigger; ⌘Y accept, ⌘U reject. 
+% Intellisense is available for LaTeX commands.
 
 \documentclass[letterpaper,11pt]{article}
 
@@ -22,25 +20,12 @@ export const DEFAULT_LATEX_CONTENT = String.raw`
 \input{glyphtounicode}
 
 
-%----------FONT OPTIONS----------
-% sans-serif
-% \usepackage[sfdefault]{FiraSans}
-% \usepackage[sfdefault]{roboto}
-% \usepackage[sfdefault]{noto-sans}
-% \usepackage[default]{sourcesanspro}
-
-% serif
-% \usepackage{CormorantGaramond}
-% \usepackage{charter}
-
-
 \pagestyle{fancy}
-\fancyhf{} % clear all header and footer fields
+\fancyhf{}
 \fancyfoot{}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
-% Adjust margins
 \addtolength{\oddsidemargin}{-0.5in}
 \addtolength{\evensidemargin}{-0.5in}
 \addtolength{\textwidth}{1in}
@@ -53,16 +38,12 @@ export const DEFAULT_LATEX_CONTENT = String.raw`
 \raggedright
 \setlength{\tabcolsep}{0in}
 
-% Sections formatting
 \titleformat{\section}{
   \vspace{-4pt}\scshape\raggedright\large
 }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
-% Ensure that generate pdf is machine readable/ATS parsable
 \pdfgentounicode=1
 
-%-------------------------
-% Custom commands
 \newcommand{\resumeItem}[1]{
   \item\small{
     {#1 \vspace{-2pt}}
@@ -105,12 +86,6 @@ export const DEFAULT_LATEX_CONTENT = String.raw`
 
 
 \begin{document}
-
-%----------HEADING----------
-% \begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
-%   \textbf{\href{http://sourabhbajaj.com/}{\Large Sourabh Bajaj}} & Email : \href{mailto:sourabh@sourabhbajaj.com}{sourabh@sourabhbajaj.com}\\
-%   \href{http://sourabhbajaj.com/}{http://www.sourabhbajaj.com} & Mobile : +1-123-456-7890 \\
-% \end{tabular*}
 
 \begin{center}
     \textbf{\Huge \scshape Jake Ryan} \\ \vspace{1pt}
@@ -215,7 +190,6 @@ export const DEFAULT_LATEX_CONTENT = String.raw`
  \end{itemize}
 
 
-%-------------------------------------------
 \end{document}
 
 `;

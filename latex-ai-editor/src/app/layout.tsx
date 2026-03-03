@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TeXel",
+  title: "TeXel - Dashboard",
   description: "AI-native LaTeX editor for resumes and documents",
 };
 
