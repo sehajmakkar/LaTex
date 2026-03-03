@@ -10,38 +10,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useUser, SignOutButton } from "@clerk/nextjs";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { DashboardNav } from "@/components/shared/DashboardNav";
 
 export default function BillingSuccessPage() {
-  const { user } = useUser();
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 px-4 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
-              <FileCode2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <span className="font-display font-semibold">TeXel</span>
-          </Link>
-          <span className="text-sm text-muted-foreground">
-            {user?.firstName ?? "User"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+      <DashboardNav
+        rightContent={
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard">Dashboard</Link>
           </Button>
-          <SignOutButton>
-            <Button variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </SignOutButton>
-        </div>
-      </header>
+        }
+      />
 
       <main className="flex flex-1 items-center justify-center p-6">
         <Card className="w-full max-w-md">

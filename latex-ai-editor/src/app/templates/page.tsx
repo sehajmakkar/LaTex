@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TemplateCard } from "@/components/templates/TemplateCard";
 import { UseTemplateDialog } from "@/components/templates/UseTemplateDialog";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { DashboardNav } from "@/components/shared/DashboardNav";
 import type { TemplateManifest } from "@/types";
 
 const ALL_FILTER = "All";
@@ -98,38 +98,57 @@ export default function TemplatesPage() {
 
   const filterOptions = [ALL_FILTER, ...tags];
 
+  const leftContent = (
+    <>
+      <Button variant="ghost" size="icon" asChild>
+        <Link href={isSignedIn ? "/dashboard" : "/"}>
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+      </Button>
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
+          <FileCode2 className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <span className="font-display font-semibold">TeXel</span>
+      </div>
+    </>
+  );
+
+  const rightContent = isSignedIn ? (
+    <Button variant="outline" size="sm" asChild>
+      <Link href="/dashboard">Back to projects</Link>
+    </Button>
+  ) : (
+    <Button size="sm" asChild className="gap-2">
+      <Link href="/sign-in?redirect_url=/templates">
+        <LayoutDashboard className="h-4 w-4" />
+        Sign in
+      </Link>
+    </Button>
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 backdrop-blur-md px-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href={isSignedIn ? "/dashboard" : "/"}>
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-              <FileCode2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <h1 className="font-display text-lg font-semibold">
-              Resume Templates
-            </h1>
-          </div>
+      <DashboardNav leftContent={leftContent} rightContent={rightContent} />
 
-          {/* Category filter dropdown */}
+      <main className="flex-1 overflow-auto p-6">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h1 className="font-display text-xl font-semibold">
+            Resume Templates
+          </h1>
           {tags.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="ml-2 gap-1.5 text-xs"
+                  className="gap-1.5 shrink-0 text-xs"
                 >
                   {activeFilter}
                   <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[160px]">
+              <DropdownMenuContent align="end" className="min-w-[160px]">
                 {filterOptions.map((option) => (
                   <DropdownMenuItem
                     key={option}
@@ -146,24 +165,6 @@ export default function TemplatesPage() {
             </DropdownMenu>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          {isSignedIn ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard">Back to projects</Link>
-            </Button>
-          ) : (
-            <Button size="sm" asChild className="gap-2">
-              <Link href="/sign-in?redirect_url=/templates">
-                <LayoutDashboard className="h-4 w-4" />
-                Sign in
-              </Link>
-            </Button>
-          )}
-        </div>
-      </header>
-
-      <main className="flex-1 overflow-auto p-6">
         <p className="mb-6 text-sm text-muted-foreground">
           Choose a template to start your tech resume. You can customize your
           contact details and then edit the LaTeX in the editor.

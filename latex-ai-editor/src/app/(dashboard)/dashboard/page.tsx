@@ -12,10 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useUser, SignOutButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { FREE_PROJECT_LIMIT, DEFAULT_LATEX_CONTENT } from "@/lib/constants";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { DashboardNav } from "@/components/shared/DashboardNav";
 
 type Project = {
   id: string;
@@ -25,7 +25,7 @@ type Project = {
 };
 
 export default function DashboardPage() {
-  const { user, isLoaded } = useUser();
+  const { isLoaded } = useUser();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [plan, setPlan] = useState<string>("free");
@@ -148,40 +148,25 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 backdrop-blur-md px-4">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-              <FileCode2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <span className="font-display font-semibold">TeXel</span>
-          </Link>
-          <span className="text-sm text-muted-foreground">
-            {user?.firstName ?? "User"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/billing" className="gap-2">
-              <CreditCard className="h-3.5 w-3.5" />
-              Billing
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/templates">Templates</Link>
-          </Button>
-          <Button size="sm" onClick={handleNewProject} disabled={creating} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {creating ? "Creating..." : "New project"}
-          </Button>
-          <SignOutButton>
-            <Button variant="ghost" size="sm">
-              Sign out
+      <DashboardNav
+        rightContent={
+          <>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/billing" className="gap-2">
+                <CreditCard className="h-3.5 w-3.5" />
+                Billing
+              </Link>
             </Button>
-          </SignOutButton>
-        </div>
-      </header>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/templates">Templates</Link>
+            </Button>
+            <Button size="sm" onClick={handleNewProject} disabled={creating} className="gap-2">
+              <Plus className="h-4 w-4" />
+              {creating ? "Creating..." : "New project"}
+            </Button>
+          </>
+        }
+      />
 
       <main className="flex-1 overflow-auto p-6">
         <div className="mb-6 flex items-center justify-between">
@@ -189,8 +174,8 @@ export default function DashboardPage() {
             <h1 className="font-display text-xl font-semibold">Your projects</h1>
             <p className="text-sm text-muted-foreground">
               {plan === "free"
-                ? `${projects.length} / ${FREE_PROJECT_LIMIT} projects (free)`
-                : `${projects.length} projects (${plan})`}
+                ? `${projects.length} / ${FREE_PROJECT_LIMIT} projects`
+                : `${projects.length} projects`}
             </p>
           </div>
         </div>

@@ -2,21 +2,64 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FileCode2, CreditCard, Loader2, Zap, Sparkles } from "lucide-react";
+import { Check, FileCode2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useUser, SignOutButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { DashboardNav } from "@/components/shared/DashboardNav";
+import { FREE_PROJECT_LIMIT } from "@/lib/constants";
+
+const PLANS = [
+  {
+    id: "free",
+    name: "Free",
+    description: "Perfect for trying out TeXel",
+    price: "$0",
+    period: "forever",
+    features: [
+      "LaTeX editor with live preview",
+      `${FREE_PROJECT_LIMIT} resume projects`,
+      "Basic templates",
+      "Export to PDF",
+      "Community support",
+    ],
+    highlighted: false,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    description: "For serious job seekers and writers",
+    price: "$3.99",
+    period: "/month",
+    features: [
+      "Unlimited projects",
+      "Inline AI editing",
+      "All professional templates",
+      "Export to PDF",
+      "Priority support",
+      "Version history",
+    ],
+    highlighted: true,
+  },
+  {
+    id: "pro_plus",
+    name: "Pro Plus",
+    description: "For power users and teams",
+    price: "$29.99",
+    period: "/month",
+    features: [
+      "Everything in Pro",
+      "Unlimited projects & templates",
+      "Custom LaTeX packages",
+      "Dedicated support",
+      "Early access to new features",
+    ],
+    highlighted: false,
+  },
+] as const;
 
 export default function BillingPage() {
-  const { user, isLoaded } = useUser();
+  const { isLoaded } = useUser();
   const [plan, setPlan] = useState<string>("free");
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(
     null
@@ -58,9 +101,7 @@ export default function BillingPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        toast.error(
-          json.error?.message ?? "Failed to start checkout"
-        );
+        toast.error(json.error?.message ?? "Failed to start checkout");
         return;
       }
       const url = json.data?.checkout_url;
@@ -86,122 +127,139 @@ export default function BillingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex h-14 items-center justify-between border-b border-border bg-background/70 px-4 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
-              <FileCode2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <span className="font-display font-semibold">TeXel</span>
-          </Link>
-          <span className="text-sm text-muted-foreground">
-            {user?.firstName ?? "User"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+      <DashboardNav
+        rightContent={
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard">Dashboard</Link>
           </Button>
-          <SignOutButton>
-            <Button variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </SignOutButton>
-        </div>
-      </header>
+        }
+      />
 
-      <main className="flex-1 overflow-auto p-6">
-        <div className="mx-auto max-w-2xl">
-          <h1 className="font-display text-xl font-semibold">Billing</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage your plan and billing via Dodo Payments.
-          </p>
+      <main className="flex-1 overflow-auto px-6 py-8">
+        <div className="mx-auto max-w-5xl">
+          {/* Section Header */}
+          <div className="mb-16 text-center">
+            <p className="mb-4 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+              Pricing
+            </p>
+            <h1 className="font-display text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+              Simple, transparent pricing
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-balance text-lg text-muted-foreground">
+              Start free. Upgrade when you need more projects and AI editing.
+            </p>
+            {subscriptionStatus && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Current subscription: <strong>{subscriptionStatus}</strong>
+              </p>
+            )}
+          </div>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Current plan
-              </CardTitle>
-              <CardDescription>
-                You are on the <strong>{plan}</strong> plan
-                {subscriptionStatus ? ` (${subscriptionStatus})` : ""}.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {plan === "free" && (
-                <p className="text-sm text-muted-foreground">
-                  Upgrade to unlock more projects and features.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          {/* Pricing Grid */}
+          <div className="grid gap-6 md:grid-cols-3">
+            {PLANS.map((p) => {
+              const isCurrentPlan = plan === p.id;
+              const isPaidPlan = p.id === "pro" || p.id === "pro_plus";
+              const isCheckoutLoading =
+                isPaidPlan && checkoutPlan === p.id;
 
-          {plan !== "pro_plus" && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Upgrade</CardTitle>
-                <CardDescription>
-                  Choose a plan below. You will be redirected to Dodo Payments to
-                  complete checkout.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                {plan !== "pro" && (
-                  <Card className="border-2">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Zap className="h-4 w-4" />
-                        Pro
-                      </CardTitle>
-                      <CardDescription>
-                        More projects and priority support.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+              return (
+                <div
+                  key={p.id}
+                  className={`flex h-full flex-col rounded-2xl border p-8 ${
+                    p.highlighted
+                      ? "border-primary/50 bg-primary/5 dark:bg-primary/10"
+                      : "border-border bg-card"
+                  }`}
+                >
+                  {/* Plan Header */}
+                  <div className="mb-6">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h2 className="font-heading text-xl font-semibold text-foreground">
+                        {p.name}
+                      </h2>
+                      {isCurrentPlan && (
+                        <span className="rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          Current plan
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {p.description}
+                    </p>
+                  </div>
+
+                  {/* Price */}
+                  <div className="mb-6">
+                    <span className="font-display text-4xl font-bold text-foreground">
+                      {p.price}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {p.period}
+                    </span>
+                  </div>
+
+                  {/* Features */}
+                  <ul className="mb-8 flex-1 space-y-3">
+                    {p.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-3">
+                        <Check className="h-5 w-5 shrink-0 text-primary" />
+                        <span className="text-sm text-muted-foreground">
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* CTA */}
+                  <div className="mt-auto">
+                    {p.id === "free" ? (
+                      isCurrentPlan ? (
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-full"
+                          disabled
+                        >
+                          Current plan
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-full"
+                          asChild
+                        >
+                          <Link href="/dashboard">Start writing free</Link>
+                        </Button>
+                      )
+                    ) : isCurrentPlan ? (
                       <Button
-                        className="w-full"
-                        disabled={!!checkoutPlan}
-                        onClick={() => handleUpgrade("pro")}
+                        variant="secondary"
+                        className="w-full rounded-full"
+                        disabled
                       >
-                        {checkoutPlan === "pro" ? (
+                        Current plan
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full rounded-full"
+                        variant={p.highlighted ? "default" : "secondary"}
+                        disabled={!!checkoutPlan}
+                        onClick={() =>
+                          handleUpgrade(p.id as "pro" | "pro_plus")
+                        }
+                      >
+                        {isCheckoutLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          "Upgrade to Pro"
+                          `Upgrade to ${p.name}`
                         )}
                       </Button>
-                    </CardContent>
-                  </Card>
-                )}
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Sparkles className="h-4 w-4" />
-                      Pro Plus
-                    </CardTitle>
-                    <CardDescription>
-                      Unlimited projects and all features.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      variant={plan === "pro" ? "default" : "secondary"}
-                      className="w-full"
-                      disabled={!!checkoutPlan}
-                      onClick={() => handleUpgrade("pro_plus")}
-                    >
-                      {checkoutPlan === "pro_plus" ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Upgrade to Pro Plus"
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </CardContent>
-            </Card>
-          )}
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </main>
     </div>
