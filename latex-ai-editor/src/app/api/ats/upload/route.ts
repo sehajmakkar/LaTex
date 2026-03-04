@@ -8,15 +8,25 @@ type SupportedSource = "upload_pdf" | "upload_docx" | "upload_txt";
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  const parser = new PDFParse({ data: buffer });
-  const result = await parser.getText();
-  await parser.destroy();
-  return result.text || "";
+  try {
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    await parser.destroy();
+    return result.text || "";
+  } catch (error) {
+    console.error("ATS upload PDF parse error:", error);
+    throw new Error("PDF_PARSE_FAILED");
+  }
 }
 
 async function extractTextFromDocx(buffer: Buffer): Promise<string> {
-  const result = await mammoth.extractRawText({ buffer });
-  return result.value || "";
+  try {
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value || "";
+  } catch (error) {
+    console.error("ATS upload DOCX parse error:", error);
+    throw new Error("DOCX_PARSE_FAILED");
+  }
 }
 
 async function extractTextFromTxt(buffer: Buffer): Promise<string> {
@@ -65,15 +75,41 @@ export async function POST(req: NextRequest) {
     let source: SupportedSource;
 
     if (mime === "application/pdf" || lowerName.endsWith(".pdf")) {
-      text = await extractTextFromPdf(buffer);
-      source = "upload_pdf";
+      try {
+        text = await extractTextFromPdf(buffer);
+        source = "upload_pdf";
+      } catch {
+        return NextResponse.json(
+          {
+            error: {
+              code: "PDF_PARSE_FAILED",
+              message:
+                "We couldn't reliably read this PDF. Try uploading a DOCX or TXT version instead.",
+            },
+          },
+          { status: 422 }
+        );
+      }
     } else if (
       mime ===
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       lowerName.endsWith(".docx")
     ) {
-      text = await extractTextFromDocx(buffer);
-      source = "upload_docx";
+      try {
+        text = await extractTextFromDocx(buffer);
+        source = "upload_docx";
+      } catch {
+        return NextResponse.json(
+          {
+            error: {
+              code: "DOCX_PARSE_FAILED",
+              message:
+                "We couldn't reliably read this DOCX file. Try exporting as PDF or TXT and uploading again.",
+            },
+          },
+          { status: 422 }
+        );
+      }
     } else if (mime === "text/plain" || lowerName.endsWith(".txt")) {
       text = await extractTextFromTxt(buffer);
       source = "upload_txt";

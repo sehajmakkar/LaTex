@@ -377,4 +377,75 @@ You can verify both by:
 - Opening `/dashboard` and confirming the **ATS score** nav button.
 - Opening any project page (`/project/<id>`) and checking the header dropdown for **ATS score**.
 
+---
+
+## 9. Phase 4 – Public ATS landing (`/ats/free`)
+
+Phase 4 adds a **public** ATS entry point for new users:
+
+- `/ats/free` is public (no auth) via `middleware.ts`.
+- It lets visitors upload a resume and see a **teaser** ATS result:
+  - Combined score
+  - Summary
+  - Top 3 suggestions
+- Full report, sections, keywords, and history still require sign-in and use the authenticated ATS flows.
+
+### 9.1. Public endpoint: `/ats/free`
+
+Route: `src/app/ats/free/page.tsx`
+
+Key behavior:
+
+- Top navbar:
+  - TeXel logo and \"Free ATS score check\" label.
+  - Links to **Templates**, **Sign in**, and a theme toggle.
+- Main content:
+  1. **Upload + JD form (left):**
+     - File input for `.pdf`, `.docx`, `.txt` (5MB max).
+     - Optional job description textarea.
+     - **Get free ATS score** button:
+       - Calls `POST /api/ats/upload`.
+       - Then `POST /api/ats/analyze` with `{ source: "upload", text, jobDescription? }`.
+       - If either call returns `401`, it redirects to `/sign-in?redirect_url=/ats/free`.
+  2. **Teaser report (right):**
+     - Uses the `report` from `/api/ats/analyze`, but only shows:
+       - Combined score
+       - Parse score
+       - Quality score
+       - Summary
+       - Top 3 suggestions
+     - A lock strip clearly explains that **full report** is available only after sign-in.
+  3. **CTA strip:**
+     - \"Sign in to see full report\" → `/sign-in`.
+     - \"View Pro plans\" → `/billing`.
+
+Testing steps:
+
+1. Open `http://localhost:3000/ats/free` in a private/incognito window.
+2. Verify that the page loads **without** redirecting (public route).
+3. Upload a small sample resume:
+   - If you are not signed in, the first call to `/api/ats/upload` or `/api/ats/analyze` will likely return `401` → you should be redirected to the sign-in page with `redirect_url=/ats/free`.
+   - After signing in and returning to `/ats/free`, re-run the upload; now you should see a teaser score + summary + a few suggestions.
+4. Confirm that:
+   - Only a partial report is visible.
+   - There is a clear CTA to sign in for the full report and to view plans.
+
+### 9.2. Landing page integration (home → `/ats/free`)
+
+Landing route: `src/app/page.tsx`
+
+Changes:
+
+- Below the main TeXel hero (logo, description, **Sign in**, **Resume templates**) there is now a **Free ATS resume score** card:
+  - Icon + text: \"Free ATS resume score\" with a short explanation.
+  - Button **\"Try a free ATS scan\"** linking to `/ats/free`.
+
+How to check:
+
+1. Open `http://localhost:3000` while **logged out**.
+2. You should see:
+   - The same TeXel hero.
+   - A new card at the bottom of the hero with a **Free ATS scan** CTA.
+3. Click **\"Try a free ATS scan\"** and confirm you land on `/ats/free`.
+
 
