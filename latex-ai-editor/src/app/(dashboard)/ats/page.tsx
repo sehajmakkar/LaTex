@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -40,6 +40,7 @@ export default function AtsIndexPage() {
   const [jobDescription, setJobDescription] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -204,14 +205,14 @@ export default function AtsIndexPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
+            <Card className="flex h-full flex-col">
               <CardHeader>
                 <CardTitle>Scan from a TeXel project</CardTitle>
                 <CardDescription>
-                  Choose one of your existing projects and optionally paste a job description.
+                  Choose one of your existing projects to run ATS analysis.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="flex flex-1 flex-col gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Project
@@ -229,19 +230,8 @@ export default function AtsIndexPage() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Job description (optional)
-                  </label>
-                  <textarea
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="Paste a job description to see job match and keywords…"
-                    className="h-24 w-full resize-none rounded-md border bg-background px-2 py-1.5 text-xs"
-                  />
-                </div>
                 <Button
-                  className="w-full"
+                  className="mt-auto w-full"
                   size="sm"
                   onClick={handleAnalyzeProject}
                   disabled={analyzing}
@@ -258,39 +248,40 @@ export default function AtsIndexPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="flex h-full flex-col">
               <CardHeader>
                 <CardTitle>Upload a resume file</CardTitle>
                 <CardDescription>
-                  Upload a PDF, DOCX, or TXT file. We&apos;ll extract the text and run the same ATS
-                  checks.
+                  Upload a PDF, DOCX, or TXT file for ATS analysis.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="flex flex-1 flex-col gap-3">
                 <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Resume file
+                  </label>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept=".pdf,.docx,.txt"
                     onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-                    className="w-full text-xs text-muted-foreground"
+                    className="hidden"
+                    aria-hidden
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 w-full justify-start rounded-md border bg-background px-2 py-1.5 text-left text-sm font-normal"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploadFile ? uploadFile.name : "Choose file…"}
+                  </Button>
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     Max size 5MB. Supported: PDF, DOCX, TXT.
                   </p>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Job description (optional)
-                  </label>
-                  <textarea
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="Paste a job description to see job match and keywords…"
-                    className="h-24 w-full resize-none rounded-md border bg-background px-2 py-1.5 text-xs"
-                  />
-                </div>
                 <Button
-                  className="w-full"
+                  className="mt-auto w-full"
                   size="sm"
                   onClick={handleUploadAnalyze}
                   disabled={uploading}
@@ -307,6 +298,24 @@ export default function AtsIndexPage() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Job description (optional)</CardTitle>
+              <CardDescription>
+                Paste a job description below to see job match and keyword analysis. Used for both
+                project scan and resume upload above.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Paste a job description to see job match and keywords…"
+                className="h-24 w-full resize-none rounded-md border bg-background px-2 py-1.5 text-xs"
+              />
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

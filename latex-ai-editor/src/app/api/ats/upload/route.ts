@@ -9,10 +9,15 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
-    const parser = new PDFParse({ data: buffer });
+    // Pass a Uint8Array so pdfjs-dist accepts data reliably in all runtimes (Node/Next).
+    const data =
+      buffer.buffer != null
+        ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+        : new Uint8Array(buffer);
+    const parser = new PDFParse({ data });
     const result = await parser.getText();
     await parser.destroy();
-    return result.text || "";
+    return result.text ?? "";
   } catch (error) {
     console.error("ATS upload PDF parse error:", error);
     throw new Error("PDF_PARSE_FAILED");
