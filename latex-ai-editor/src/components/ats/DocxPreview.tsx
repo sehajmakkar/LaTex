@@ -46,7 +46,7 @@ export function DocxPreview({ fileUrl, className }: DocxPreviewProps) {
 
         const { renderAsync } = await import("docx-preview");
         containerRef.current.innerHTML = "";
-        await renderAsync(blob, containerRef.current, null, {
+        await renderAsync(blob, containerRef.current, undefined, {
           className: "ats-docx-preview",
           inWrapper: true,
           ignoreWidth: false,
