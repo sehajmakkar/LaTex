@@ -13,6 +13,7 @@ import { ScoreSlider } from "@/components/ats/ScoreSlider";
 import { ReportSection } from "@/components/ats/ReportSection";
 import { SuggestionList } from "@/components/ats/SuggestionList";
 import { KeywordAnalysisView } from "@/components/ats/KeywordAnalysis";
+import { DocxPreview } from "@/components/ats/DocxPreview";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
@@ -127,6 +128,11 @@ export default function AtsReportPage({ params }: PageProps) {
     !!data.resumeFileMimeType &&
     (data.resumeFileMimeType === "application/pdf" ||
       data.resumeFileMimeType.toLowerCase().includes("pdf"));
+  const isDocx =
+    !!data.resumeFileMimeType &&
+    (data.resumeFileMimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      (data.resumeFileName || "").toLowerCase().endsWith(".docx"));
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -209,7 +215,9 @@ export default function AtsReportPage({ params }: PageProps) {
                     {hasOriginalFile
                       ? isPdf
                         ? "This is the original PDF used for ATS parsing."
-                        : "This is the original file used for ATS parsing."
+                        : isDocx
+                          ? "This is the original DOCX used for ATS parsing."
+                          : "This is the original file used for ATS parsing."
                       : "This is the plain-text view used for ATS parsing."}
                   </p>
                 </div>
@@ -219,16 +227,23 @@ export default function AtsReportPage({ params }: PageProps) {
                   <div className="flex h-full flex-col gap-3">
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                       <span className="truncate">{data.resumeFileName ?? "resume"}</span>
-                      {!isPdf && (
-                        <span>Preview may be limited for non-PDF files.</span>
+                      {!isPdf && !isDocx && (
+                        <span>Preview may be limited for this file type.</span>
                       )}
                     </div>
                     <div className="flex-1 overflow-hidden rounded-lg border bg-background">
-                      <iframe
-                        src={`/api/ats/reports/${data.id}/file`}
-                        title="Original resume file"
-                        className="h-full w-full border-0"
-                      />
+                      {isDocx ? (
+                        <DocxPreview
+                          fileUrl={`/api/ats/reports/${data.id}/file`}
+                          className="h-full"
+                        />
+                      ) : (
+                        <iframe
+                          src={`/api/ats/reports/${data.id}/file`}
+                          title="Original resume file"
+                          className="h-full w-full border-0"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>

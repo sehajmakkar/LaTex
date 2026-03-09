@@ -31,6 +31,7 @@
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",
     "codemirror-lang-latex": "^0.2.0",
+    "docx-preview": "^0.3.7",
     "dodopayments": "^2.22.0",
     "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.34.3",

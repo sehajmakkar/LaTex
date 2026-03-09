@@ -37,7 +37,9 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     }
 
     const contentType =
-      row.resumeFileMimeType || (object.ContentType as string | undefined) || "application/octet-stream";
+      row.resumeFileMimeType ||
+      (object.ContentType as string | undefined) ||
+      "application/octet-stream";
     const fileName = row.resumeFileName || "resume";
 
     return new NextResponse(body as any, {
@@ -60,4 +62,3 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     );
   }
 }
-
