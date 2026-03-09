@@ -147,6 +147,18 @@ export default function AtsIndexPage() {
         body: JSON.stringify({
           source: "upload",
           text,
+          upload: uploadJson.data?.storageKey
+            ? {
+                storageKey: uploadJson.data.storageKey as string,
+                fileName: uploadJson.data.fileName as string,
+                mimeType: uploadJson.data.mimeType as string,
+                source: uploadJson.data.source as
+                  | "upload_pdf"
+                  | "upload_docx"
+                  | "upload_txt"
+                  | undefined,
+              }
+            : undefined,
           jobDescription: jobDescription || undefined,
         }),
       });

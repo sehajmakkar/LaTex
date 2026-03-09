@@ -13,6 +13,14 @@ const AnalyzeSchema = z.object({
   projectId: z.string().uuid().optional(),
   text: z.string().min(10).optional(),
   jobDescription: z.string().min(0).max(10_000).optional(),
+  upload: z
+    .object({
+      storageKey: z.string(),
+      fileName: z.string(),
+      mimeType: z.string(),
+      source: z.enum(["upload_pdf", "upload_docx", "upload_txt"]).optional(),
+    })
+    .optional(),
 });
 
 const FREE_ATS_SCANS_PER_DAY = 3;
@@ -42,7 +50,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { source, projectId, text, jobDescription } = parsed.data;
+    const { source, projectId, text, jobDescription, upload } = parsed.data;
 
     const user = await userService.getByClerkId(userId);
     const plan = user.plan ?? "free";
@@ -105,8 +113,12 @@ export async function POST(req: NextRequest) {
         );
       }
       resumeText = text;
-      // For now we don't track exact upload type here; default to upload_txt-like
-      sourceLabel = "upload_txt";
+      // Prefer the more specific upload source from the upload step, fall back to generic.
+      if (upload?.source) {
+        sourceLabel = upload.source;
+      } else {
+        sourceLabel = "upload_txt";
+      }
     }
 
     const report = await analyzeAtsFromText(resumeText, jobDescription);
@@ -121,6 +133,9 @@ export async function POST(req: NextRequest) {
       projectId: resolvedProjectId,
       source: sourceLabel,
       resumeText,
+      resumeFileKey: upload?.storageKey ?? null,
+      resumeFileName: upload?.fileName ?? null,
+      resumeFileMimeType: upload?.mimeType ?? null,
       score: report.combinedScore,
       parseScore: report.parseScore,
       qualityScore: report.qualityScore,

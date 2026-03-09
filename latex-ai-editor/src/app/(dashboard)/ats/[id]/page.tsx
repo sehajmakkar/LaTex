@@ -25,6 +25,9 @@ type AtsReportResponse = {
   parseScore: number;
   qualityScore: number;
   resumeText: string;
+  resumeFileKey: string | null;
+  resumeFileName: string | null;
+  resumeFileMimeType: string | null;
   jobDescription: string | null;
   report: {
     parseScore: number;
@@ -119,6 +122,11 @@ export default function AtsReportPage({ params }: PageProps) {
   }
 
   const { report } = data;
+  const hasOriginalFile = !!data.resumeFileKey;
+  const isPdf =
+    !!data.resumeFileMimeType &&
+    (data.resumeFileMimeType === "application/pdf" ||
+      data.resumeFileMimeType.toLowerCase().includes("pdf"));
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -198,15 +206,39 @@ export default function AtsReportPage({ params }: PageProps) {
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Resume preview</p>
                   <p className="text-xs text-muted-foreground">
-                    This is the plain-text view used for ATS parsing.
+                    {hasOriginalFile
+                      ? isPdf
+                        ? "This is the original PDF used for ATS parsing."
+                        : "This is the original file used for ATS parsing."
+                      : "This is the plain-text view used for ATS parsing."}
                   </p>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto p-4">
-                <pre className="whitespace-pre-wrap break-words text-xs text-foreground">
-                  {data.resumeText}
-                </pre>
-              </div>
+              {hasOriginalFile ? (
+                <div className="flex-1 overflow-hidden p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span className="truncate">{data.resumeFileName ?? "resume"}</span>
+                      {!isPdf && (
+                        <span>Preview may be limited for non-PDF files.</span>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-hidden rounded-lg border bg-background">
+                      <iframe
+                        src={`/api/ats/reports/${data.id}/file`}
+                        title="Original resume file"
+                        className="h-full w-full border-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-auto p-4">
+                  <pre className="whitespace-pre-wrap break-words text-xs text-foreground">
+                    {data.resumeText}
+                  </pre>
+                </div>
+              )}
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

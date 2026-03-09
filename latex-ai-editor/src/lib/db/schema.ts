@@ -57,6 +57,9 @@ export const atsReports = pgTable("ats_reports", {
   }),
   source: text("source").notNull(), // "editor" | "upload_pdf" | "upload_docx" | "upload_txt"
   resumeText: text("resume_text").notNull(),
+  resumeFileKey: text("resume_file_key"),
+  resumeFileName: text("resume_file_name"),
+  resumeFileMimeType: text("resume_file_mime_type"),
   score: integer("score").notNull(), // primary display score (combined or parse)
   parseScore: integer("parse_score").notNull(),
   qualityScore: integer("quality_score").notNull(),

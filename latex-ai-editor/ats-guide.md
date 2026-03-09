@@ -448,4 +448,258 @@ How to check:
    - A new card at the bottom of the hero with a **Free ATS scan** CTA.
 3. Click **\"Try a free ATS scan\"** and confirm you land on `/ats/free`.
 
+---
+
+## 10. Phase 5 – Original resume storage & viewer
+
+Phase 5 adds:
+
+- Optional storage of the **original uploaded resume file** (PDF/DOCX/TXT) in **Cloudflare R2**.
+- A secure API route to stream the file.
+- A visual resume viewer on the right side of `/ats/[id]`.
+
+If R2 is **not** configured, ATS still works; the report page falls back to showing the plain-text resume only.
+
+### 10.1. Cloudflare R2 setup
+
+1. Create an R2 bucket in your Cloudflare dashboard (e.g. `texel-ats-resumes`).
+2. Create an **API token / access key pair** with read/write access to that bucket.
+3. Note the **account ID** and R2 endpoint URL, typically:
+
+   - `https://<account-id>.r2.cloudflarestorage.com`
+
+4. In the app `.env` file, add:
+
+   ```bash
+   R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+   R2_ACCESS_KEY_ID=your_r2_access_key_id
+   R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
+   R2_BUCKET_NAME=your-r2-bucket-name
+   ```
+
+5. The example values and comments are also in `.env.example` so teammates know how to configure it.
+
+The env variables are typed via `src/lib/env.ts`:
+
+- `R2_ENDPOINT` (optional URL)
+- `R2_ACCESS_KEY_ID` (optional string)
+- `R2_SECRET_ACCESS_KEY` (optional string)
+- `R2_BUCKET_NAME` (optional string)
+
+If any of these are missing, R2 integrations will **no-op** and ATS falls back to text-only resumes.
+
+### 10.2. R2 client and schema changes
+
+R2 is accessed via a thin wrapper around the S3 SDK:
+
+- File: `src/services/storage/r2.ts`
+- Uses `@aws-sdk/client-s3` to:
+  - `uploadResumeObject` – `PutObject` into the configured bucket.
+  - `getResumeObject` – `GetObject` to stream the file back.
+- `isR2Enabled()` returns `true` only when all required env vars are present.
+
+The `ats_reports` table has three new, nullable columns in `src/lib/db/schema.ts`:
+
+- `resumeFileKey` – storage key in R2 (e.g. `ats-resumes/<userId>/<timestamp>-resume.pdf`).
+- `resumeFileName` – original filename.
+- `resumeFileMimeType` – MIME type (`application/pdf`, Word, or text).
+
+After pulling the latest schema, run:
+
+```bash
+npm run db:push
+```
+
+so Drizzle updates your database with the new columns.
+
+### 10.3. Upload flow: storing the original file
+
+Route: `src/app/api/ats/upload/route.ts`
+
+Behavior changes:
+
+- After basic validation (auth, size, type), the route now:
+  - If R2 is enabled:
+    - Generates a safe key: `ats-resumes/<userId>/<timestamp>-<sanitized-filename>`.
+    - Calls `uploadResumeObject({ key, body: buffer, contentType: mime })`.
+    - Swallows upload errors with a server log; ATS text extraction still proceeds.
+- It still:
+  - Extracts plain text from PDF/DOCX/TXT.
+  - Returns the same `data.text` used by `/api/ats/analyze`.
+
+New response shape (success):
+
+```json
+{
+  "data": {
+    "fileName": "your-resume.pdf",
+    "mimeType": "application/pdf",
+    "source": "upload_pdf",
+    "text": "Plain text extracted from the resume...",
+    "storageKey": "ats-resumes/<userId>/...-your-resume.pdf"
+  }
+}
+```
+
+If R2 is not configured or upload fails, `storageKey` will be `null`/omitted.
+
+### 10.4. Analyze flow: persisting file metadata on the report
+
+Route: `src/app/api/ats/analyze/route.ts`
+
+- `AnalyzeSchema` now accepts an optional `upload` object:
+
+  ```ts
+  upload: {
+    storageKey: string;
+    fileName: string;
+    mimeType: string;
+    source?: "upload_pdf" | "upload_docx" | "upload_txt";
+  }
+  ```
+
+- For `source: "upload"`:
+  - `resumeText` still comes from `text` (as before).
+  - `sourceLabel` prefers the more specific `upload.source` (e.g. `"upload_pdf"`), falling back to `"upload_txt"`.
+  - The report row is created with:
+    - `resumeFileKey`
+    - `resumeFileName`
+    - `resumeFileMimeType`
+
+The details route `GET /api/ats/reports/[id]` now also returns these fields:
+
+- `resumeFileKey`
+- `resumeFileName`
+- `resumeFileMimeType`
+
+Existing reports (created before Phase 5) will have these as `null`, and the UI will fall back to the plain-text view.
+
+### 10.5. Secure file streaming route
+
+Route: `src/app/api/ats/reports/[id]/file/route.ts`
+
+Behavior:
+
+1. Authenticates the user via Clerk (`auth()`).
+2. Loads the ATS report via `atsRepository.findById(id, userId)`.
+3. Ensures `resumeFileKey` is present.
+4. Fetches the object from R2 using `getResumeObject({ key })`.
+5. Streams the body back with:
+   - `Content-Type`: `resumeFileMimeType` or the object’s `ContentType`, defaulting to `application/octet-stream`.
+   - `Content-Disposition`: `inline; filename="<original-name>"`.
+
+If anything fails (no auth, not found, R2 error), it returns a JSON error with an appropriate status code.
+
+### 10.6. ATS report UI – showing the actual resume
+
+Route: `src/app/(dashboard)/ats/[id]/page.tsx`
+
+Right-hand panel changes:
+
+- The `AtsReportResponse` type now includes:
+  - `resumeFileKey`
+  - `resumeFileName`
+  - `resumeFileMimeType`
+- The component computes:
+
+  ```ts
+  const hasOriginalFile = !!data.resumeFileKey;
+  const isPdf =
+    !!data.resumeFileMimeType &&
+    (data.resumeFileMimeType === "application/pdf" ||
+      data.resumeFileMimeType.toLowerCase().includes("pdf"));
+  ```
+
+- Header text:
+  - If `hasOriginalFile && isPdf`: “This is the original PDF used for ATS parsing.”
+  - If `hasOriginalFile && !isPdf`: “This is the original file used for ATS parsing.”
+  - Otherwise: “This is the plain-text view used for ATS parsing.”
+
+- Body:
+  - If `hasOriginalFile`:
+    - Shows the original file name.
+    - Renders an inline viewer:
+
+      ```tsx
+      <iframe
+        src={`/api/ats/reports/${data.id}/file`}
+        title="Original resume file"
+        className="h-full w-full border-0"
+      />
+      ```
+
+    - Browsers will typically render PDFs inline; for DOCX/TXT, the behavior may be a download or a basic preview depending on the environment.
+  - If there is **no** original file (older reports or project-based scans):
+    - Falls back to the previous behavior: a scrollable `<pre>` with `resumeText`.
+
+### 10.7. UI wiring – forwarding upload metadata
+
+Two UI entry points forward the upload metadata so it can be stored with the ATS report.
+
+1. **Authenticated ATS dashboard** – `src/app/(dashboard)/ats/page.tsx`
+
+   - After `/api/ats/upload`:
+
+     - If `uploadJson.data.storageKey` exists, the code passes:
+
+       ```ts
+       upload: {
+         storageKey,
+         fileName,
+         mimeType,
+         source, // "upload_pdf" | "upload_docx" | "upload_txt"
+       }
+       ```
+
+     - to `POST /api/ats/analyze` along with `source: "upload"` and `text`.
+
+2. **Public/free ATS page** – `src/app/ats/free/page.tsx`
+
+   - Behaves similarly: when signed-in users run a free scan, the upload metadata is forwarded so any resulting saved report can link back to the original file.
+
+### 10.8. Testing checklist (Phase 5)
+
+1. **Configure R2** as described in 10.1 and restart the dev server:
+
+   ```bash
+   npm run dev
+   ```
+
+2. **Run database migration** (once per environment after pulling Phase 5):
+
+   ```bash
+   npm run db:push
+   ```
+
+3. **Authenticated flow (`/ats`)**
+   - Sign in and open `http://localhost:3000/ats`.
+   - Upload a PDF resume and click **Upload & analyze**.
+   - After redirect to `/ats/<id>`:
+     - Left panel: scores, summary, sections, suggestions should behave as before.
+     - Right panel:
+       - Should display the PDF inline via an `<iframe>`.
+       - Header text should mention the original PDF.
+   - Inspect network tab:
+     - You should see a `GET /api/ats/reports/<id>/file` call returning `200` with `Content-Type: application/pdf`.
+
+4. **Non-PDF upload (DOCX/TXT)**
+   - Repeat the flow with a DOCX or TXT resume.
+   - Right panel should show:
+     - Filename.
+     - A note that preview may be limited for non-PDF files.
+     - The iframe pointing at `/api/ats/reports/<id>/file` (browser may render or download).
+
+5. **No-R2 fallback**
+   - Temporarily remove or comment out the `R2_*` variables in `.env`.
+   - Restart `npm run dev`.
+   - Upload and analyze a resume.
+   - On `/ats/<id>`:
+     - Right panel should show the **plain-text** resume exactly as before.
+     - There should be no calls to `/api/ats/reports/<id>/file`.
+
+6. **Older reports**
+   - Visit an existing `/ats/<id>` report created before Phase 5.
+   - Confirm:
+     - Left panel still works.
+     - Right panel shows plain text (since there is no stored original file).
 

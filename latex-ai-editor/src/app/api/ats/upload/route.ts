@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
+import { isR2Enabled, uploadResumeObject } from "@/services/storage/r2";
 
 type SupportedSource = "upload_pdf" | "upload_docx" | "upload_txt";
 
@@ -78,6 +79,22 @@ export async function POST(req: NextRequest) {
 
     let text = "";
     let source: SupportedSource;
+    let storageKey: string | undefined;
+
+    if (isR2Enabled()) {
+      try {
+        const safeName = lowerName.replace(/[^a-z0-9.\-_]/gi, "_");
+        const key = `ats-resumes/${userId}/${Date.now()}-${safeName || "resume"}`;
+        await uploadResumeObject({
+          key,
+          body: buffer,
+          contentType: mime || "application/octet-stream",
+        });
+        storageKey = key;
+      } catch (error) {
+        console.error("ATS upload: R2 upload failed, continuing without original file:", error);
+      }
+    }
 
     if (mime === "application/pdf" || lowerName.endsWith(".pdf")) {
       try {
@@ -149,6 +166,7 @@ export async function POST(req: NextRequest) {
         mimeType: mime || "application/octet-stream",
         source,
         text: trimmed,
+        storageKey,
       },
     });
   } catch (error) {
