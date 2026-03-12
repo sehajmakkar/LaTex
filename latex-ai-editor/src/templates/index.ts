@@ -30,12 +30,58 @@ import {
   techLeadContent,
 } from "./leadership";
 
+import {
+  chicagoManifest,
+  chicagoContent,
+  milanoManifest,
+  milanoContent,
+  classicManifest,
+  classicContent,
+} from "./classic";
+
+import {
+  geometricManifest,
+  geometricContent,
+} from "./geometric";
+
+import {
+  projectHighlightsManifest,
+  projectHighlightsContent,
+} from "./highlights";
+
+import {
+  technicalManifest,
+  technicalContent,
+} from "./technical";
+
+import {
+  academicManifest,
+  academicContent,
+  scholarlyManifest,
+  scholarlyContent,
+} from "./academic";
+
 // --- Template registry: add new templates here ---
 const ALL_TEMPLATES: { manifest: TemplateManifest; content: string }[] = [
+  // Existing templates
   { manifest: modernTechManifest, content: modernTechContent },
   { manifest: classicDevManifest, content: classicDevContent },
   { manifest: minimalistDevManifest, content: minimalistDevContent },
   { manifest: techLeadManifest, content: techLeadContent },
+
+  // New classic family
+  { manifest: chicagoManifest, content: chicagoContent },
+  { manifest: milanoManifest, content: milanoContent },
+  { manifest: classicManifest, content: classicContent },
+
+  // New layout styles
+  { manifest: geometricManifest, content: geometricContent },
+  { manifest: projectHighlightsManifest, content: projectHighlightsContent },
+  { manifest: technicalManifest, content: technicalContent },
+
+  // Academic-focused
+  { manifest: academicManifest, content: academicContent },
+  { manifest: scholarlyManifest, content: scholarlyContent },
 ];
 
 // Build lookup maps
