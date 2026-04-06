@@ -609,7 +609,7 @@ Four developer-focused resume templates are available: **Modern Tech**, **Minima
 
 4. **Save and reload**
    - Edit the LaTeX, click **Save** in the header.
-   - Refresh the page; your content should persist (requires database).
+   - Refresh the page; your content should persist (requires database). 
 
 ### Template List
 
