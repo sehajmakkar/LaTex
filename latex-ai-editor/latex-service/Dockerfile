@@ -23,7 +23,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --production 2>/dev/null || npm install --production
 
-COPY server.js .
+COPY engine-detect.js server.js .
 
 # Security: run as non-root
 RUN adduser -D -u 1000 latex

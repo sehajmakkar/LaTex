@@ -21,6 +21,10 @@ export const env = createEnv({
     R2_ACCESS_KEY_ID: z.string().optional(),
     R2_SECRET_ACCESS_KEY: z.string().optional(),
     R2_BUCKET_NAME: z.string().optional(),
+    /** When set, `/api/compile` proxies to this URL (e.g. Railway LaTeX service). */
+    LATEX_SERVICE_URL: z.string().url().optional(),
+    /** Shared secret; sent as `x-api-secret` to the LaTeX service when set. */
+    LATEX_API_SECRET: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
@@ -43,6 +47,8 @@ export const env = createEnv({
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
+    LATEX_SERVICE_URL: process.env.LATEX_SERVICE_URL,
+    LATEX_API_SECRET: process.env.LATEX_API_SECRET,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

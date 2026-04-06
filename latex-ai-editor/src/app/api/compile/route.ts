@@ -6,20 +6,8 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { MAX_CONTENT_SIZE, COMPILE_TIMEOUT_MS } from "@/lib/constants";
-
-type Engine = "pdflatex" | "xelatex" | "lualatex";
-
-/** Normalized TeX program directive: % !TEX program = <engine> (case-insensitive, flexible spacing) */
-const TEX_PROGRAM_RE =
-  /%\s*!TEX\s+program\s*=\s*(\w+)/gi;
-
-function normalizeEngineFromDirective(match: string): Engine | null {
-  const lower = match.toLowerCase();
-  if (lower === "xelatex") return "xelatex";
-  if (lower === "lualatex") return "lualatex";
-  if (lower === "pdflatex") return "pdflatex";
-  return null;
-}
+import { env } from "@/lib/env";
+import { detectEngine, type LatexEngine } from "@/lib/latex-engine";
 
 const CompileRequestSchema = z.object({
   projectId: z.string(),
@@ -27,33 +15,12 @@ const CompileRequestSchema = z.object({
   engine: z.enum(["pdflatex", "xelatex", "lualatex"]).optional(),
 });
 
-function detectEngine(content: string): Engine {
-  // 1. Explicit TeX program directive (Overleaf-style) — highest priority
-  let m: RegExpExecArray | null;
-  TEX_PROGRAM_RE.lastIndex = 0;
-  while ((m = TEX_PROGRAM_RE.exec(content)) !== null) {
-    const engine = normalizeEngineFromDirective(m[1]);
-    if (engine) return engine;
-  }
+const REMOTE_FETCH_BUFFER_MS = 15_000;
 
-  // 2. LuaTeX-only: these require lualatex (not xelatex)
-  const luaOnly =
-    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*luacode\s*\}/i.test(content) ||
-    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*luatexbase\s*\}/i.test(content) ||
-    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*luaotfload\s*\}/i.test(content) ||
-    /\\directlua\s*\{/.test(content) ||
-    /\\luacode\s*\{/.test(content);
-  if (luaOnly) return "lualatex";
-
-  // 3. Unicode engines: fontspec / unicode-math / polyglossia need xelatex or lualatex
-  const needsUnicode =
-    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*fontspec\s*\}/i.test(content) ||
-    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*unicode-math\s*\}/i.test(content) ||
-    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*polyglossia\s*\}/i.test(content);
-  if (needsUnicode) return "xelatex";
-
-  return "pdflatex";
-}
+type CompileResult = {
+  success: boolean;
+  log: string;
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -74,47 +41,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { content, engine: requestedEngine } = parsed.data;
+    const engine: LatexEngine = requestedEngine ?? detectEngine(content);
 
-    // Use explicitly requested engine, otherwise auto-detect from content
-    const engine: Engine = requestedEngine ?? detectEngine(content);
-
-    const jobId = randomUUID();
-    const workDir = join(tmpdir(), "latex-compile", jobId);
-
-    await mkdir(workDir, { recursive: true });
-
-    const texFile = join(workDir, "main.tex");
-    await writeFile(texFile, content, "utf-8");
-
-    const result = await compileLatex(workDir, "main.tex", engine);
-
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "COMPILE_ERROR",
-            message: "Compilation failed",
-            details: { log: result.log, engine },
-          },
-        },
-        { status: 422 }
-      );
+    const serviceBase = env.LATEX_SERVICE_URL?.replace(/\/$/, "");
+    if (serviceBase) {
+      return compileViaRemoteService(serviceBase, content, engine);
     }
 
-    const pdfPath = join(workDir, "main.pdf");
-    const pdfBuffer = await readFile(pdfPath);
-    const pdfBase64 = pdfBuffer.toString("base64");
-    const pdfUrl = `data:application/pdf;base64,${pdfBase64}`;
-
-    await rm(workDir, { recursive: true, force: true }).catch(() => {});
-
-    return NextResponse.json({
-      data: {
-        pdfUrl,
-        log: result.log,
-        engine, // useful for the client to know which engine was used
-      },
-    });
+    return compileLocally(content, engine);
   } catch (error) {
     console.error("Compile error:", error);
     return NextResponse.json(
@@ -123,15 +57,175 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-type CompileResult = {
-  success: boolean;
-  log: string;
-};
+
+async function compileViaRemoteService(
+  serviceBase: string,
+  content: string,
+  engine: LatexEngine
+): Promise<NextResponse> {
+  const url = `${serviceBase}/compile`;
+  const controller = new AbortController();
+  const timeoutMs = COMPILE_TIMEOUT_MS + REMOTE_FETCH_BUFFER_MS;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (env.LATEX_API_SECRET) {
+      headers["x-api-secret"] = env.LATEX_API_SECRET;
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ content, engine }),
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let json: unknown;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      return NextResponse.json(
+        {
+          error: {
+            code: "COMPILE_SERVICE_ERROR",
+            message: "LaTeX service returned an invalid response",
+            details: { status: response.status },
+          },
+        },
+        { status: 502 }
+      );
+    }
+
+    if (response.status === 422 && json && typeof json === "object" && json !== null) {
+      const o = json as Record<string, unknown>;
+      const log = typeof o.log === "string" ? o.log : "";
+      const eng = typeof o.engine === "string" ? o.engine : engine;
+      return NextResponse.json(
+        {
+          error: {
+            code: "COMPILE_ERROR",
+            message: "Compilation failed",
+            details: { log, engine: eng },
+          },
+        },
+        { status: 422 }
+      );
+    }
+
+    if (response.status === 401) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "COMPILE_SERVICE_UNAUTHORIZED",
+            message: "LaTeX service rejected the API secret",
+          },
+        },
+        { status: 502 }
+      );
+    }
+
+    if (!response.ok || !json || typeof json !== "object" || json === null) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "COMPILE_SERVICE_ERROR",
+            message: "LaTeX service request failed",
+            details: { status: response.status },
+          },
+        },
+        { status: 502 }
+      );
+    }
+
+    const o = json as Record<string, unknown>;
+    if (o.ok !== true || typeof o.pdf !== "string") {
+      return NextResponse.json(
+        {
+          error: {
+            code: "COMPILE_SERVICE_ERROR",
+            message: "LaTeX service returned an unexpected payload",
+          },
+        },
+        { status: 502 }
+      );
+    }
+
+    const log = typeof o.log === "string" ? o.log : "";
+    const usedEngine = typeof o.engine === "string" ? o.engine : engine;
+    const pdfUrl = `data:application/pdf;base64,${o.pdf}`;
+
+    return NextResponse.json({
+      data: {
+        pdfUrl,
+        log,
+        engine: usedEngine,
+      },
+    });
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === "AbortError";
+    return NextResponse.json(
+      {
+        error: {
+          code: aborted ? "COMPILE_TIMEOUT" : "COMPILE_SERVICE_ERROR",
+          message: aborted
+            ? "LaTeX compilation timed out"
+            : "Could not reach the LaTeX compilation service",
+        },
+      },
+      { status: aborted ? 504 : 502 }
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function compileLocally(content: string, engine: LatexEngine): Promise<NextResponse> {
+  const jobId = randomUUID();
+  const workDir = join(tmpdir(), "latex-compile", jobId);
+
+  await mkdir(workDir, { recursive: true });
+
+  const texFile = join(workDir, "main.tex");
+  await writeFile(texFile, content, "utf-8");
+
+  const result = await compileLatex(workDir, "main.tex", engine);
+
+  if (!result.success) {
+    await rm(workDir, { recursive: true, force: true }).catch(() => {});
+    return NextResponse.json(
+      {
+        error: {
+          code: "COMPILE_ERROR",
+          message: "Compilation failed",
+          details: { log: result.log, engine },
+        },
+      },
+      { status: 422 }
+    );
+  }
+
+  const pdfPath = join(workDir, "main.pdf");
+  const pdfBuffer = await readFile(pdfPath);
+  const pdfBase64 = pdfBuffer.toString("base64");
+  const pdfUrl = `data:application/pdf;base64,${pdfBase64}`;
+
+  await rm(workDir, { recursive: true, force: true }).catch(() => {});
+
+  return NextResponse.json({
+    data: {
+      pdfUrl,
+      log: result.log,
+      engine,
+    },
+  });
+}
 
 async function compileLatex(
   workDir: string,
   filename: string,
-  engine: Engine
+  engine: LatexEngine
 ): Promise<CompileResult> {
   return new Promise((resolve) => {
     const args = [
