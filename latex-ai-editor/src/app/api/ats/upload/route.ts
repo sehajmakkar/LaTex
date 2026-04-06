@@ -8,15 +8,13 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
-    const { PDFParse } = await import("pdf-parse");
-    // Pass a Uint8Array so pdfjs-dist accepts data reliably in all runtimes (Node/Next).
-    const data =
-      buffer.buffer != null
-        ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-        : new Uint8Array(buffer);
-    const parser = new PDFParse({ data });
-    const result = await parser.getText();
-    await parser.destroy();
+    const pdfParseModule = await import("pdf-parse");
+    const pdfParse = (
+      "default" in pdfParseModule
+        ? pdfParseModule.default
+        : pdfParseModule
+    ) as (dataBuffer: Buffer) => Promise<{ text?: string }>;
+    const result = await pdfParse(buffer);
     return result.text ?? "";
   } catch (error) {
     console.error("ATS upload PDF parse error:", error);
