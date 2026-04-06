@@ -4,8 +4,20 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import type { TemplateManifest } from "@/types";
 
-const TEMPLATE_PREVIEW_IMAGE =
+const FALLBACK_PREVIEW_IMAGE =
   "https://res.cloudinary.com/drrvrit9i/image/upload/v1771757683/resume-demo_prcwka.png";
+
+const TEMPLATE_IMAGES: Record<string, string> = {
+  "academic": "/templates/academic-template.jpg",
+  "chicago": "/templates/chicago-template.jpg",
+  "classic": "/templates/classic-template.jpg",
+  "geometric": "/templates/geometric-template.avif",
+  "milano": "/templates/milano-template.jpg",
+  "project-highlights": "/templates/project-highlights-template.jpg",
+  "scholarly": "/templates/scholarly-template.jpg",
+  "simple": "/templates/simple-template.jpg",
+  "technical": "/templates/technical-template.jpg",
+};
 
 type TemplateCardProps = {
   template: TemplateManifest;
@@ -13,13 +25,15 @@ type TemplateCardProps = {
 };
 
 export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
+  const imageUrl = TEMPLATE_IMAGES[template.id] || FALLBACK_PREVIEW_IMAGE;
+
   return (
     <article className="group flex h-full flex-col rounded-md border border-border bg-card hover:border-ring/50 transition-all duration-300 overflow-hidden">
       {/* Preview image */}
       <div className="relative w-full shrink-0 overflow-hidden max-h-96">
         <div className="relative aspect-210/297 w-full">
           <Image
-            src={TEMPLATE_PREVIEW_IMAGE}
+            src={imageUrl}
             alt={`Preview of ${template.name} resume`}
             fill
             className="object-cover object-top transition-transform duration-300"
