@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Manrope, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -46,6 +48,8 @@ export default function RootLayout({
           className={`${manrope.variable} ${geistMono.variable} font-sans antialiased`}
         >
           <Providers>{children}</Providers>
+          <Analytics />
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>
