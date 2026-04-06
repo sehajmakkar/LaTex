@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,22 +20,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TemplateCard } from "@/components/templates/TemplateCard";
-import { UseTemplateDialog } from "@/components/templates/UseTemplateDialog";
 import { DashboardNav } from "@/components/shared/DashboardNav";
+import { toast } from "sonner";
 import type { TemplateManifest } from "@/types";
 
 const ALL_FILTER = "All";
 
 export default function TemplatesPage() {
   const { isSignedIn } = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const [templates, setTemplates] = useState<TemplateManifest[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState("Top Picks");
   const [loading, setLoading] = useState(true);
-  const [selectedTemplate, setSelectedTemplate] =
-    useState<TemplateManifest | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creatingId, setCreatingId] = useState<string | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -56,15 +55,50 @@ export default function TemplatesPage() {
   }, [fetchTemplates]);
 
   const handleUseTemplate = useCallback(
-    (template: TemplateManifest) => {
+    async (template: TemplateManifest) => {
       if (!isSignedIn) {
         router.push("/sign-in?redirect_url=/templates");
         return;
       }
-      setSelectedTemplate(template);
-      setDialogOpen(true);
+
+      setCreatingId(template.id);
+      try {
+        // Fetch raw template content (no variable substitution)
+        const contentRes = await fetch(`/api/templates/${template.id}`);
+        if (!contentRes.ok) {
+          const err = await contentRes.json();
+          throw new Error(err.error?.message ?? "Failed to get template");
+        }
+        const { data: templateData } = await contentRes.json();
+
+        // Use user's profile name for the project name
+        const userName = user?.fullName || user?.firstName || "Resume";
+        const projectRes = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: `${template.name} - ${userName}`,
+            content: templateData.content,
+            templateId: template.id,
+          }),
+        });
+        if (!projectRes.ok) {
+          const err = await projectRes.json();
+          throw new Error(err.error?.message ?? "Failed to create project");
+        }
+        const { data: project } = await projectRes.json();
+
+        toast.success("Project created from template");
+        router.push(`/project/${project.id}`);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Something went wrong"
+        );
+      } finally {
+        setCreatingId(null);
+      }
     },
-    [isSignedIn, router]
+    [isSignedIn, user, router]
   );
 
   /** Group templates by each tag they belong to (preserving tag order). */
@@ -166,8 +200,8 @@ export default function TemplatesPage() {
           )}
         </div>
         <p className="mb-6 text-sm text-muted-foreground">
-          Choose a template to start your tech resume. You can customize your
-          contact details and then edit the LaTeX in the editor.
+          Choose a template to get started. Clicking &ldquo;Use template&rdquo; will
+          create a project and open it directly in the editor.
         </p>
 
         {loading ? (
@@ -194,6 +228,7 @@ export default function TemplatesPage() {
                       key={template.id}
                       template={template}
                       onUseTemplate={handleUseTemplate}
+                      isCreating={creatingId === template.id}
                     />
                   ))}
                 </div>
@@ -203,11 +238,7 @@ export default function TemplatesPage() {
         )}
       </main>
 
-      <UseTemplateDialog
-        template={selectedTemplate}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
+
     </div>
   );
 }

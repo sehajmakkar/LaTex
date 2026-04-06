@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TemplateManifest } from "@/types";
 
@@ -22,9 +23,10 @@ const TEMPLATE_IMAGES: Record<string, string> = {
 type TemplateCardProps = {
   template: TemplateManifest;
   onUseTemplate: (template: TemplateManifest) => void;
+  isCreating?: boolean;
 };
 
-export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
+export function TemplateCard({ template, onUseTemplate, isCreating }: TemplateCardProps) {
   const imageUrl = TEMPLATE_IMAGES[template.id] || FALLBACK_PREVIEW_IMAGE;
 
   return (
@@ -53,10 +55,18 @@ export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
         <Button
           variant="secondary"
           size="sm"
-          className="mt-auto w-full h-7 text-xs flex items-center justify-center"
+          className="mt-auto w-full h-7 text-xs flex items-center justify-center gap-1.5"
           onClick={() => onUseTemplate(template)}
+          disabled={isCreating}
         >
-          Use template
+          {isCreating ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            "Use template"
+          )}
         </Button>
       </div>
     </article>
