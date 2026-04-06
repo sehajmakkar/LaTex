@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { PDFParse } from "pdf-parse";
-import mammoth from "mammoth";
 import { isR2Enabled, uploadResumeObject } from "@/services/storage/r2";
 
 type SupportedSource = "upload_pdf" | "upload_docx" | "upload_txt";
@@ -10,6 +8,7 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
+    const { PDFParse } = await import("pdf-parse");
     // Pass a Uint8Array so pdfjs-dist accepts data reliably in all runtimes (Node/Next).
     const data =
       buffer.buffer != null
@@ -27,6 +26,7 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
 
 async function extractTextFromDocx(buffer: Buffer): Promise<string> {
   try {
+    const mammoth = await import("mammoth");
     const result = await mammoth.extractRawText({ buffer });
     return result.value || "";
   } catch (error) {
@@ -34,6 +34,8 @@ async function extractTextFromDocx(buffer: Buffer): Promise<string> {
     throw new Error("DOCX_PARSE_FAILED");
   }
 }
+
+export const runtime = "nodejs";
 
 async function extractTextFromTxt(buffer: Buffer): Promise<string> {
   return buffer.toString("utf-8");
