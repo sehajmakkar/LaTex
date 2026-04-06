@@ -9,6 +9,18 @@ import { MAX_CONTENT_SIZE, COMPILE_TIMEOUT_MS } from "@/lib/constants";
 
 type Engine = "pdflatex" | "xelatex" | "lualatex";
 
+/** Normalized TeX program directive: % !TEX program = <engine> (case-insensitive, flexible spacing) */
+const TEX_PROGRAM_RE =
+  /%\s*!TEX\s+program\s*=\s*(\w+)/gi;
+
+function normalizeEngineFromDirective(match: string): Engine | null {
+  const lower = match.toLowerCase();
+  if (lower === "xelatex") return "xelatex";
+  if (lower === "lualatex") return "lualatex";
+  if (lower === "pdflatex") return "pdflatex";
+  return null;
+}
+
 const CompileRequestSchema = z.object({
   projectId: z.string(),
   content: z.string().max(MAX_CONTENT_SIZE),
@@ -16,23 +28,29 @@ const CompileRequestSchema = z.object({
 });
 
 function detectEngine(content: string): Engine {
-  // Explicit TeX program directive (Overleaf-style comments)
-  if (content.includes("% !TEX program = xelatex")) return "xelatex";
-  if (content.includes("% !TEX program = lualatex")) return "lualatex";
-  if (content.includes("% !TEX program = pdflatex")) return "pdflatex";
+  // 1. Explicit TeX program directive (Overleaf-style) — highest priority
+  let m: RegExpExecArray | null;
+  TEX_PROGRAM_RE.lastIndex = 0;
+  while ((m = TEX_PROGRAM_RE.exec(content)) !== null) {
+    const engine = normalizeEngineFromDirective(m[1]);
+    if (engine) return engine;
+  }
 
-  // fontspec requires xelatex or lualatex — default to xelatex
-  if (content.includes("\\usepackage{fontspec}")) return "xelatex";
+  // 2. LuaTeX-only: these require lualatex (not xelatex)
+  const luaOnly =
+    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*luacode\s*\}/i.test(content) ||
+    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*luatexbase\s*\}/i.test(content) ||
+    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*luaotfload\s*\}/i.test(content) ||
+    /\\directlua\s*\{/.test(content) ||
+    /\\luacode\s*\{/.test(content);
+  if (luaOnly) return "lualatex";
 
-  // luacode or luatexbase are lualatex-specific
-  if (
-    content.includes("\\usepackage{luacode}") ||
-    content.includes("\\usepackage{luatexbase}")
-  )
-    return "lualatex";
-
-  // unicode-math works with both but is most common with xelatex
-  if (content.includes("\\usepackage{unicode-math}")) return "xelatex";
+  // 3. Unicode engines: fontspec / unicode-math / polyglossia need xelatex or lualatex
+  const needsUnicode =
+    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*fontspec\s*\}/i.test(content) ||
+    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*unicode-math\s*\}/i.test(content) ||
+    /\\(?:usepackage|RequirePackage)(\s*\[[^\]]*\])?\s*\{\s*polyglossia\s*\}/i.test(content);
+  if (needsUnicode) return "xelatex";
 
   return "pdflatex";
 }
