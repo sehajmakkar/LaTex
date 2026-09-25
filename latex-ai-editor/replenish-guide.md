@@ -111,3 +111,67 @@ Run against `localhost:3000` with a temporary Clerk test user, using the real AP
 | B14 ATS with JD | ✅ | Keyword section present |
 | B15 ATS free (signed out) | ❌ expected | 500 on upload / HTML 404 on analyze. Fixed in Phase 1.2 + Phase 4 |
 | B16 Sign out | ⏭️ | *(optional for you)* Browser-only |
+
+---
+
+## Step: Phase 1.1, hardened compile service (26 Sep 2026)
+
+### What changed
+
+| Area | Change | Files |
+|---|---|---|
+| Sandbox | TeX can only read or write inside its own job folder (`openin_any=p`, `openout_any=p`); shell escape is off; TeX gets an allow-listed environment only | `latex-service/server.js` |
+| **User isolation** | Each compile runs as its own Linux user (`texjob0`–`7`) in a private folder. This closes a hole found during testing: lualatex's Lua could read the server's memory and environment (where the secret is) and write to `/tmp` | `server.js`, `Dockerfile` |
+| Secret | Service **refuses to start** without `LATEX_API_SECRET`; constant-time comparison | `server.js` |
+| Stability | 1 compile at a time + queue of 4 (Railway Free has 512 MB RAM); **503 + `Retry-After`** when full; timeout kills all child processes; 50 MB file cap; CPU cap; `tini` as PID 1 | `server.js`, `Dockerfile` |
+| Coverage | Same Alpine TeX Live 2023 "full minus docs" as before, plus `latexmk` multi-pass (references, biber/bibtex), biber, extra fonts, fonts findable by name, prebuilt font caches | `Dockerfile` |
+| Tests | `latex-service/test/run-tests.mjs` (31 checks) · `npm run test:templates` (compiles every template) · GitHub Action that runs both on every change to the service or templates | `latex-service/test/`, `scripts/compile-templates.ts`, `.github/workflows/latex-service.yml` |
+| Cleanup | Dropped the unused `uuid` dependency; Railway healthcheck timeout 30 s → 120 s | `package.json`, `railway.toml` |
+
+New optional Railway variables (defaults suit Free): `MAX_CONCURRENT_COMPILES` (1, max 8), `MAX_QUEUED_COMPILES` (4), `QUEUE_TIMEOUT_MS` (30000), `COMPILE_TIMEOUT_MS` (60000).
+
+### What I already verified (local Docker, amd64 like Railway, limited to 512 MB RAM and 1 CPU)
+**30/31 checks pass:**
+- Auth (401 without the secret or with a wrong one); empty document → 400.
+- pdflatex, xelatex (with TeX Gyre, Liberation, Carlito, Roboto and Source Sans by name) and lualatex all compile.
+- latexmk resolves `\ref`, `\pageref` and biblatex/biber citations.
+- tikz, pgfplots, fontawesome5, tcolorbox, siunitx and 20 more packages load; moderncv compiles.
+- **Security, all blocked:**
+  - TeX: `\input{/proc/self/environ}`, reads of `/etc/passwd`, `/proc/1/environ` and `../` paths, `\write18`, writes to `/tmp`.
+  - Lua: reading the service code, writing `/tmp`, `/var/tmp` or `/dev/shm`, `io.popen`, `os.execute`, `os.getenv(secret)`, opening any other process's `environ` or `mem`.
+- An infinite loop is killed at the timeout. A burst of 10 gives 5×200 + 5×503 (with `Retry-After`), and the service is idle afterwards.
+- **1 cosmetic failure:** a 200 MB file write *is* stopped at 50 MB within ~1 s, but it's labelled `reason: "error"` instead of `"limit"`. Logged as a low-priority follow-up.
+
+**Image size: 3.98 GiB unpacked**, about the same as the image Railway already accepted (it has the same TeX Live payload). See the deploy note below.
+
+Timings above are under emulation on a Mac (Rosetta), so Railway should be faster. lualatex's ~8 s is mostly font loading; that's expected, and xelatex/pdflatex are the usual engines for resumes.
+
+### Deploy (you)
+1. Commit and push to `main`. Railway rebuilds the service from `latex-ai-editor/latex-service` automatically. The first build takes about 10–15 min.
+2. In Railway → the service → **Variables**, make sure `LATEX_API_SECRET` is still set. **Without it the new service stops at startup** (by design).
+3. **Watch the build/deploy log.**
+   - If it fails with an **image size** error: tell me, and I'll drop the Chinese/Japanese/Korean packs (~650 MB) from the Dockerfile.
+   - A good deploy log ends with:
+     `LaTeX compiler listening on 0.0.0.0:8080 (pdfTeX … TeX Live 2023/Alpine Linux; 1 concurrent, queue 4)`
+4. The **GitHub Action "LaTeX service"** runs on the push. Check it goes green under the repo's **Actions** tab. It builds the image, runs the 31 checks, and compiles every template.
+
+### Test against Railway after deploying (you, or ask me)
+```bash
+cd latex-ai-editor
+# quick checks without the slow timeout/burst tests
+SERVICE_URL="$LATEX_SERVICE_URL" LATEX_API_SECRET="<your secret>" SKIP_SLOW=1 node latex-service/test/run-tests.mjs
+# every template
+LATEX_SERVICE_URL="<url>" LATEX_API_SECRET="<your secret>" npm run test:templates
+```
+Then, in the app: open a project → **Compile** → the PDF appears.
+
+### Results (fill in)
+
+| Test | Result | Notes |
+|---|---|---|
+| Railway build succeeded (no image-size error) | | |
+| Deploy log shows "listening … 1 concurrent, queue 4" | | |
+| GitHub Action "LaTeX service" green | | |
+| `run-tests.mjs` against Railway (SKIP_SLOW=1) | | |
+| `npm run test:templates` against Railway | | |
+| Compile from the app editor | | |

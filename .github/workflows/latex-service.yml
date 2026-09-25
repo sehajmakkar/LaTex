@@ -1,0 +1,63 @@
+# Builds the LaTeX compile service image, runs its security/limits tests, and
+# compiles every resume template against it. Runs when the service or any
+# template changes, so a template needing a missing package never ships.
+name: LaTeX service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "latex-ai-editor/latex-service/**"
+      - "latex-ai-editor/src/templates/**"
+      - "latex-ai-editor/scripts/compile-templates.ts"
+      - ".github/workflows/latex-service.yml"
+  pull_request:
+    paths:
+      - "latex-ai-editor/latex-service/**"
+      - "latex-ai-editor/src/templates/**"
+      - "latex-ai-editor/scripts/compile-templates.ts"
+      - ".github/workflows/latex-service.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      LATEX_API_SECRET: ci-only-secret
+      LATEX_SERVICE_URL: http://localhost:8080
+      SERVICE_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t vero-latex latex-ai-editor/latex-service
+
+      - name: Check image fits Railway Free (4 GB)
+        run: |
+          size=$(docker image inspect vero-latex --format '{{.Size}}')
+          echo "Image size: $((size / 1024 / 1024)) MB"
+          test "$size" -lt 4000000000
+
+      - name: Start service with Railway Free limits
+        run: |
+          docker run -d --name latex -p 8080:8080 --memory 512m --cpus 1 \
+            -e LATEX_API_SECRET -e COMPILE_TIMEOUT_MS=20000 vero-latex
+          for i in $(seq 1 60); do curl -sf localhost:8080/health && exit 0; sleep 2; done
+          docker logs latex; exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Service tests (auth, engines, sandbox, limits)
+        run: node latex-ai-editor/latex-service/test/run-tests.mjs
+
+      - name: Compile every template
+        working-directory: latex-ai-editor
+        run: |
+          npm ci
+          npm run test:templates
+
+      - name: Service logs
+        if: always()
+        run: docker logs latex 2>&1 | tail -100

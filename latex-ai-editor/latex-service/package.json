@@ -1,12 +1,12 @@
 {
-    "name": "texel-latex-compiler",
-    "version": "1.0.0",
+    "name": "vero-latex-compiler",
+    "version": "2.0.0",
     "private": true,
     "scripts": {
-        "start": "node server.js"
+        "start": "node server.js",
+        "test": "node test/run-tests.mjs"
     },
     "dependencies": {
-        "express": "^4.21.0",
-        "uuid": "^11.1.0"
+        "express": "^4.21.0"
     }
 }
