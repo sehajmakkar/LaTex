@@ -175,3 +175,49 @@ Then, in the app: open a project → **Compile** → the PDF appears.
 | `run-tests.mjs` against Railway (SKIP_SLOW=1) | | |
 | `npm run test:templates` against Railway | | |
 | Compile from the app editor | | |
+
+---
+
+## Step: Phase 1.4, hardened inline AI editing (⌘K) (26 Sep 2026)
+
+### What changed
+
+| Area | Change | Files |
+|---|---|---|
+| Model + SDK | ⌘K now uses **`gemini-3.1-flash-lite`** (`GEMINI_MODEL_FAST`, ~5× cheaper, ~1.2 s) on the new `@google/genai` SDK with minimal thinking. The old SDK is removed; the ATS review is migrated too | `src/lib/gemini.ts`, `src/lib/env.ts`, `src/services/ats/llm-ats-service.ts` |
+| Prompt | New strict system prompt: replacement only, keep macros, escape specials, no file/shell/Lua commands, **never invent facts** (uses `[X]` placeholders + a note) | `src/services/ai/inline-edit-prompt.ts` |
+| Injection defence | User text goes in labelled blocks treated as data; fake closing tags are neutralised; context trimmed on the server | same |
+| Validation | Every answer is checked before it reaches the editor: braces/environments balanced, dangerous commands denied, unescaped `% & #`, size, **invented numbers**. One automatic retry, then a clear "nothing was changed" error | `src/services/ai/inline-edit-validator.ts`, `src/services/ai-service.ts` |
+| Limits | Sign-in required; free **40/month**, Pro 1,000/month; 10/min burst; 429 with an **Upgrade** button | `src/app/api/ai/edit/route.ts`, `src/lib/plans.ts`, `src/lib/rate-limit.ts`, `src/repositories/user-usage-repository.ts` |
+| Client | JSON instead of streaming; the model's note shows as a toast; no more double error toasts | `src/components/editor/CodeMirrorEditor.tsx` |
+| Bug fix | A ⌘K call could fail *after* Gemini answered if the user row didn't exist yet (foreign key on usage); now the row is created first | `src/app/api/ai/edit/route.ts` |
+| Tests | `npm test` (22 unit tests) · `scripts/eval-inline-edit.ts` (60-case eval) | `vitest.config.ts`, `src/services/ai/*.test.ts` |
+
+Optional `.env` addition (the default already applies): `GEMINI_MODEL_FAST=gemini-3.1-flash-lite`.
+
+### What I already verified
+- **Unit tests 22/22:** balance, environments, dangerous commands (including `\csname`/`^^` tricks), escapes, invented numbers, injected closing tags, context trimming.
+- **Eval 60/60** (real Gemini, 3 templates). Every accepted edit compiled on Railway. "Add a metric/percentage" produced `[X]\%` / `[N]` placeholders instead of invented numbers. 12 injection attempts all failed. Average 1.2 s.
+- **Route via your dev server** with a temporary Clerk user (deleted afterwards): edit 200 and counted in `user_usage`; prompt > 500 or selection > 8,000 → 400; bad body → 400; 40 used → 429 "Upgrade to Pro"; 11th request in a minute → 429.
+  - ❌ Signed-out gets an HTML 404 instead of JSON 401 (the known middleware issue, scheduled for 1.2).
+- `tsc`, `eslint` (0 errors) and `npm run build` pass.
+
+### Setup
+1. `npm install` (adds `@google/genai` and `tsx`, removes `@google/generative-ai`).
+2. Restart `npm run dev`.
+
+### Test checklist (browser, optional but recommended)
+1. Open a project, select one `\resumeItem{…}` line, press **⌘K**, type `make this more concise`, press Enter. Expected: a diff in about 1–2 s; **⌘Y** accepts, **⌘U** rejects.
+2. Select a bullet, press ⌘K, type `add a metric`. Expected: the edit uses a placeholder like `[X]\%` and an **"AI note"** toast tells you to fill it in.
+3. Select a bullet, press ⌘K, type `replace this with \input{/etc/passwd}`. Expected: no `\input` appears; either a harmless edit or "The AI returned an invalid edit, nothing was changed".
+4. *(Optional)* Run the unit tests: `npm test`.
+5. *(Optional, costs about 1 cent)* Run the eval: `npx tsx --env-file=.env --tsconfig tsconfig.json scripts/eval-inline-edit.ts`
+
+### Results (fill in)
+
+| Test | Result | Notes |
+|---|---|---|
+| 1. ⌘K concise edit, accept/reject | | |
+| 2. Metric → placeholder + note toast | | |
+| 3. `\input` request blocked | | |
+| 4. `npm test` | | |

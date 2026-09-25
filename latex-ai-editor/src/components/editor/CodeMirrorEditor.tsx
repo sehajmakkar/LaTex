@@ -18,6 +18,13 @@ type CodeMirrorEditorProps = {
   className?: string;
 };
 
+type AIEditErrorBody = {
+  error?: { code?: string; message?: string };
+};
+
+/** An error whose toast has already been shown (so onError doesn't repeat it). */
+class ShownError extends Error {}
+
 async function handleAIPrompt({
   prompt,
   selection,
@@ -34,52 +41,31 @@ async function handleAIPrompt({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, selection, codeBefore, codeAfter }),
   });
+  const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.error?.message || `AI edit failed (${response.status})`);
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error("No response stream");
-  }
-
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let result = "";
-
-  // SSE events are separated by a blank line; a network chunk can end mid-event,
-  // so keep the unfinished tail in `buffer` until the rest arrives.
-  readLoop: while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    let boundary: number;
-    while ((boundary = buffer.indexOf("\n\n")) !== -1) {
-      const event = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      if (!event.startsWith("data: ")) continue;
-
-      const data = event.slice(6);
-      if (data === "[DONE]") break readLoop;
-
-      let parsed: { content?: string; error?: string };
-      try {
-        parsed = JSON.parse(data);
-      } catch {
-        continue;
-      }
-      if (parsed.error) throw new Error(parsed.error);
-      if (parsed.content) result += parsed.content;
+    const error = (body as AIEditErrorBody | null)?.error;
+    const message = error?.message || `AI edit failed (${response.status})`;
+    if (error?.code === "USAGE_LIMIT_REACHED" && /upgrade/i.test(message)) {
+      toast.error("AI edit limit reached", {
+        description: message,
+        action: { label: "Upgrade", onClick: () => window.location.assign("/billing") },
+      });
+    } else {
+      toast.error("AI edit failed", { description: message });
     }
+    throw new ShownError(message);
   }
 
-  if (!result.trim()) {
-    throw new Error("The AI returned an empty edit. Nothing was changed.");
+  const data = (body as { data?: { replacement?: string; notes?: string | null } } | null)?.data;
+  if (typeof data?.replacement !== "string") {
+    toast.error("AI edit failed", { description: "The AI returned no edit. Nothing was changed." });
+    throw new ShownError("Empty AI response");
   }
-  return result;
+  if (data.notes) {
+    toast.info("AI note", { description: data.notes });
+  }
+  return data.replacement;
 }
 
 // IMPORTANT: CSS variables in globals.css are full oklch() values
@@ -333,16 +319,7 @@ export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEdito
         editorTheme,
         aiTheme,
         aiExtension({
-          prompt: async (opts) => {
-            try {
-              const result = await handleAIPrompt(opts);
-              return result;
-            } catch (error) {
-              const message = error instanceof Error ? error.message : "AI edit failed";
-              toast.error("AI Edit Failed", { description: message });
-              throw error;
-            }
-          },
+          prompt: (opts) => handleAIPrompt(opts),
           onAcceptEdit: () => {
             toast.success("Edit accepted");
           },
@@ -350,8 +327,9 @@ export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEdito
             toast.info("Edit rejected");
           },
           onError: (error) => {
+            if (error instanceof ShownError) return;
             console.error("AI extension error:", error);
-            toast.error("AI Error", {
+            toast.error("AI edit failed", {
               description: error instanceof Error ? error.message : "An error occurred",
             });
           },

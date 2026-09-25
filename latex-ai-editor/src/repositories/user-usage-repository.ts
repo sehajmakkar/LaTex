@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { userUsage } from "@/lib/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 
 class UserUsageRepository {
   async getOrCreateToday(userId: string, today: string) {
@@ -20,6 +20,23 @@ class UserUsageRepository {
       })
       .returning();
     return created;
+  }
+
+  /** Sum of AI edits since `monthStart` (YYYY-MM-DD). */
+  async sumAiEditsSince(userId: string, monthStart: string): Promise<number> {
+    const [row] = await db
+      .select({ total: sql<number>`coalesce(sum(${userUsage.aiEdits}), 0)::int` })
+      .from(userUsage)
+      .where(and(eq(userUsage.userId, userId), gte(userUsage.date, monthStart)));
+    return row?.total ?? 0;
+  }
+
+  async incrementAiEdits(userId: string, today: string) {
+    await this.getOrCreateToday(userId, today);
+    await db
+      .update(userUsage)
+      .set({ aiEdits: sql`${userUsage.aiEdits} + 1` })
+      .where(and(eq(userUsage.userId, userId), eq(userUsage.date, today)));
   }
 
   async incrementAtsScans(userId: string, today: string) {

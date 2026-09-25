@@ -34,6 +34,29 @@ export class ProjectLimitError extends AppError {
   }
 }
 
+export class AIProviderError extends AppError {
+  constructor(details?: unknown) {
+    super("AI_PROVIDER_ERROR", "The AI service is unavailable right now. Please try again.", 502, details);
+  }
+}
+
+export class AIInvalidOutputError extends AppError {
+  constructor(reason: string) {
+    super(
+      "AI_INVALID_OUTPUT",
+      "The AI returned an invalid edit, so nothing was changed. Try rephrasing the instruction.",
+      422,
+      { reason }
+    );
+  }
+}
+
+export class UsageLimitError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super("USAGE_LIMIT_REACHED", message, 429, details);
+  }
+}
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;

@@ -10,6 +10,8 @@ export const env = createEnv({
     GEMINI_API_KEY: z.string().optional(),
     /** Gemini model id used for AI edits and ATS review, e.g. gemini-3.6-flash. */
     GEMINI_MODEL: z.string().default("gemini-3.6-flash"),
+    /** Cheaper, faster model for inline ⌘K edits. */
+    GEMINI_MODEL_FAST: z.string().default("gemini-3.1-flash-lite"),
     OPENAI_API_KEY: z.string().optional(),
     CLERK_SECRET_KEY: z.string().optional(),
     DODO_PAYMENTS_API_KEY: z.string().optional(),
@@ -38,6 +40,7 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
+    GEMINI_MODEL_FAST: process.env.GEMINI_MODEL_FAST,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,

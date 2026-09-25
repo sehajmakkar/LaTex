@@ -1,4 +1,4 @@
-import { getGeminiModel } from "@/lib/gemini";
+import { getGemini, geminiModels } from "@/lib/gemini";
 
 export type LLMSuggestion = {
   text: string;
@@ -34,20 +34,19 @@ Rules:
 - Keep suggestions specific and actionable (e.g. "Add a measurable impact to the first bullet under Experience").`;
 
 export class LLMAtsService {
-  private getModel() {
-    return getGeminiModel({
-      systemInstruction: ATS_LLM_SYSTEM_PROMPT,
-      generationConfig: {
+  async analyze(plainText: string, jobDescription?: string): Promise<LLMResult> {
+    const prompt = this.buildUserPrompt(plainText, jobDescription);
+    const result = await getGemini().models.generateContent({
+      model: geminiModels.main,
+      contents: prompt,
+      config: {
+        systemInstruction: ATS_LLM_SYSTEM_PROMPT,
         temperature: 0.3,
+        responseMimeType: "application/json",
+        abortSignal: AbortSignal.timeout(45_000),
       },
     });
-  }
-
-  async analyze(plainText: string, jobDescription?: string): Promise<LLMResult> {
-    const model = this.getModel();
-    const prompt = this.buildUserPrompt(plainText, jobDescription);
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text().trim();
+    const raw = (result.text ?? "").trim();
 
     let parsed: LLMResult;
     try {
