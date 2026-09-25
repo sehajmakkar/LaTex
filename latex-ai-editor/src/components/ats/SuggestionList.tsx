@@ -32,7 +32,7 @@ export function SuggestionList({ suggestions, plan }: SuggestionListProps) {
           <div>
             <p className="text-sm font-medium">Suggestions to improve</p>
             <p className="text-xs text-muted-foreground">
-              Apply these in the TeXel editor to raise your score.
+              Apply these in the editor to raise your score.
             </p>
           </div>
         </div>

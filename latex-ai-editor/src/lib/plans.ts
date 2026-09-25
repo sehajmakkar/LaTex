@@ -5,6 +5,8 @@
  * caps are kinder than daily ones; per-minute burst limits stop scripts.
  */
 
+import { FREE_PROJECT_LIMIT } from "@/lib/constants";
+
 export type PlanId = "free" | "pro";
 
 export type PlanLimits = {
@@ -14,7 +16,7 @@ export type PlanLimits = {
 };
 
 export const PLANS: Record<PlanId, PlanLimits> = {
-  free: { projects: 3, aiEditsPerMonth: 40, aiEditsPerMinute: 10 },
+  free: { projects: FREE_PROJECT_LIMIT, aiEditsPerMonth: 40, aiEditsPerMinute: 10 },
   pro: { projects: 100, aiEditsPerMonth: 1000, aiEditsPerMinute: 20 },
 };
 

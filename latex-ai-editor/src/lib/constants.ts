@@ -1,5 +1,5 @@
 export const DEFAULT_LATEX_CONTENT = String.raw`
-% Welcome to TeXel! 
+% Welcome to Vero!
 % Edit this template in the left pane. Use Compile to build the PDF, then Download to save as a PDF.
 % AI inline edit — select text, then ⌘K to trigger; ⌘Y accept, ⌘U reject. 
 % Intellisense is available for LaTeX commands.

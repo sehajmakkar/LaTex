@@ -24,38 +24,39 @@ type TemplateCardProps = {
   template: TemplateManifest;
   onUseTemplate: (template: TemplateManifest) => void;
   isCreating?: boolean;
+  ctaLabel?: string;
 };
 
-export function TemplateCard({ template, onUseTemplate, isCreating }: TemplateCardProps) {
+export function TemplateCard({ template, onUseTemplate, isCreating, ctaLabel = "Use template" }: TemplateCardProps) {
   const imageUrl = TEMPLATE_IMAGES[template.id] || FALLBACK_PREVIEW_IMAGE;
 
   return (
-    <article className="group flex h-full flex-col rounded-md border border-border bg-card hover:border-ring/50 transition-all duration-300 overflow-hidden">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors duration-300 hover:border-ring/60">
       {/* Preview image */}
-      <div className="relative w-full shrink-0 overflow-hidden max-h-96">
+      <div className="relative max-h-96 w-full shrink-0 overflow-hidden border-b bg-muted/40">
         <div className="relative aspect-210/297 w-full">
           <Image
             src={imageUrl}
             alt={`Preview of ${template.name} resume`}
             fill
-            className="object-cover object-top transition-transform duration-300"
+            className="object-cover object-top transition-transform duration-500 group-hover:scale-[1.02]"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         </div>
       </div>
 
       {/* Content below image */}
-      <div className="flex flex-1 flex-col p-3">
+      <div className="flex flex-1 flex-col p-4">
         <h3 className="font-display text-sm font-semibold tracking-tight">
           {template.name}
         </h3>
-        <p className="line-clamp-2 text-xs text-muted-foreground mt-0.5 mb-2">
+        <p className="mb-3 mt-1 line-clamp-2 text-xs text-muted-foreground">
           {template.description}
         </p>
         <Button
           variant="secondary"
           size="sm"
-          className="mt-auto w-full h-7 text-xs flex items-center justify-center gap-1.5"
+          className="mt-auto h-8 w-full text-xs"
           onClick={() => onUseTemplate(template)}
           disabled={isCreating}
         >
@@ -65,7 +66,7 @@ export function TemplateCard({ template, onUseTemplate, isCreating }: TemplateCa
               Creating...
             </>
           ) : (
-            "Use template"
+            ctaLabel
           )}
         </Button>
       </div>

@@ -221,3 +221,89 @@ Optional `.env` addition (the default already applies): `GEMINI_MODEL_FAST=gemin
 | 2. Metric → placeholder + note toast | | |
 | 3. `\input` request blocked | | |
 | 4. `npm test` | | |
+
+---
+
+## Step: Phase 3, Vero rebrand, app shell, landing → app flow (26 Sep 2026)
+
+### What changed (by area)
+
+| Area | Change | Files |
+|---|---|---|
+| Brand | "TeXel" → **Vero** across the app; logo mark (check-shaped "V") + `app/icon.svg`; titles now "Page · Vero"; app marked `noindex` | `src/components/brand/VeroLogo.tsx`, `src/app/icon.svg`, `src/app/layout.tsx`, `src/lib/site.ts` |
+| App shell | One sidebar for every page (Resumes, Templates, ATS check, Billing) with a **plan card** showing this month's usage and an Upgrade pill; mobile top bar + menu; signed-out variant | `src/components/shell/*`, `src/app/api/usage/route.ts`, `src/hooks/use-usage.ts` |
+| Routes | Regrouped (URLs unchanged): `(app)` for shell pages, `(editor)` for the full-screen editor | `src/app/(app)/…`, `src/app/(editor)/…` |
+| Resumes | Onboarding when empty; cards with a ⋯ menu (Open, Rename, ATS check, Delete with confirmation) | `src/app/(app)/dashboard/page.tsx` |
+| Editor | New compact header (breadcrumb + rename, **Saved** status, ATS check, Download, Compile, shortcuts); **mobile Code/Preview tabs**; **fix:** a previous resume's PDF no longer shows up | `src/components/editor/EditorHeader.tsx`, `src/app/(editor)/project/[id]/page.tsx` |
+| Templates | Filter pills; real descriptions (8 were "Placeholder…"); signed-out "Use this template" → sign-up that opens the template afterwards | `src/app/(app)/templates/page.tsx`, `src/templates/**` |
+| ATS | Decluttered into one scan panel + recent reports; report page fits the shell and mobile | `src/app/(app)/ats/**` |
+| Billing | Free vs Pro $5.99, comparison table, FAQ; success page waits for Pro to activate | `src/app/(app)/billing/**` |
+| Auth + flow | Branded sign-in/up; `/` redirects; **intents** from the landing site survive sign-up; `redirect_url` honoured (same-site only) | `src/app/sign-*`, `src/app/page.tsx`, `src/lib/intents.ts`, `src/lib/auth-params.ts`, `src/components/shell/IntentHandler.tsx` |
+| Errors | Branded 404 and error pages | `src/app/not-found.tsx`, `src/app/error.tsx` |
+
+New optional env vars (`.env.example`): `NEXT_PUBLIC_MARKETING_URL` (default `https://texels.vercel.app`) for "Back to site", and `NEXT_PUBLIC_SUPPORT_EMAIL` to show a Support link.
+
+### What I already verified
+- `tsc` clean · `eslint` 0 errors · **Vitest 27/27** (5 new tests: intent whitelist, open-redirect protection) · `npm run build` passes.
+- Screenshots (dark, 1440 px and 390 px) of the **public** pages: Templates (sidebar, pills, cards), free ATS, sign-up with `intent=template:chicago`. `/?intent=ats` signed out → `/sign-up?intent=ats` ✅.
+- Signed-in pages were **not** opened in a browser. Please run the checklist below.
+
+### Setup
+1. Restart `npm run dev` (routes moved; a stale `.next` can confuse the dev server; delete `.next` if a page 404s).
+2. *(Optional)* Add `NEXT_PUBLIC_SUPPORT_EMAIL=you@…` to `.env`.
+
+### Landing page CTAs (you, in the landing repo)
+Point the landing buttons at the app (use your app URL; locally `http://localhost:3000`):
+
+| Button | URL |
+|---|---|
+| Get started / Sign up | `https://<app>/sign-up?intent=start` |
+| Log in | `https://<app>/sign-in` |
+| Free ATS check | `https://<app>/sign-up?intent=ats` *(becomes `/ats/free` once Phase 4 makes it anonymous)* |
+| A specific template | `https://<app>/sign-up?intent=template:<id>`, e.g. `template:chicago`, `template:modern-tech` |
+| Pricing → Go Pro | `https://<app>/sign-up?intent=pro` |
+| Browse templates (no sign-up) | `https://<app>/templates` |
+
+Signed-in users following any of these skip sign-up and land straight on the action.
+
+### Test checklist (browser)
+
+| # | Check | Expected |
+|---|---|---|
+| 1 | Open `/` while signed in | Lands on **Resumes**; the sidebar shows your plan card with Resumes x/3 and AI edits x/40 |
+| 2 | Sidebar links (Resumes, Templates, ATS check, Billing) | Same shell everywhere; the current page is highlighted |
+| 3 | Narrow the window below ~768 px | Top bar with a ☰ menu; the menu closes after tapping a link |
+| 4 | Resumes → ⋯ → Rename / Delete | Rename saves; Delete asks for confirmation first |
+| 5 | With 0 resumes (or a new account) | Onboarding: template · blank · check an existing resume |
+| 6 | Templates → a filter pill → **Use template** | Opens in the editor |
+| 7 | Editor header | Breadcrumb "Resumes / name"; click the name to rename; "Saving… → Saved" after typing; Download file is named after the resume |
+| 8 | Compile resume A, go back, open resume B | B shows **no** PDF until compiled (bug fix) |
+| 9 | Editor at phone width | Code / Preview tabs; after Compile it switches to Preview |
+| 10 | ATS check → both tabs, JD toggle, a report | One panel; the report shows beside the file on desktop |
+| 11 | ⋯ → ATS check on a resume card | ATS page opens with that resume preselected |
+| 12 | Billing | Free vs Pro $5.99, comparison table, FAQ; Upgrade opens Dodo checkout |
+| 13 | Sign out, then visit `/templates` → Use this template | Sign-up page; after signing up, that template opens in the editor |
+| 14 | Signed out: `/?intent=pro` → sign in | Goes straight to Dodo checkout |
+| 15 | Signed in: a bad URL like `/nope` | Branded 404 |
+| 16 | Light mode (theme toggle) | Shell, pages and cards readable in light mode (the Clerk widget stays dark; known) |
+
+### Results (fill in)
+
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |
+| 8 | | |
+| 9 | | |
+| 10 | | |
+| 11 | | |
+| 12 | | |
+| 13 | | |
+| 14 | | |
+| 15 | | |
+| 16 | | |

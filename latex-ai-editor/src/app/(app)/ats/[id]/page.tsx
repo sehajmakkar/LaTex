@@ -1,0 +1,266 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { ScoreSlider } from "@/components/ats/ScoreSlider";
+import { ReportSection } from "@/components/ats/ReportSection";
+import { SuggestionList } from "@/components/ats/SuggestionList";
+import { KeywordAnalysisView } from "@/components/ats/KeywordAnalysis";
+import { DocxPreview } from "@/components/ats/DocxPreview";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+
+type AtsReportResponse = {
+  id: string;
+  createdAt: string;
+  source: string;
+  projectId: string | null;
+  score: number;
+  parseScore: number;
+  qualityScore: number;
+  resumeText: string;
+  resumeFileKey: string | null;
+  resumeFileName: string | null;
+  resumeFileMimeType: string | null;
+  jobDescription: string | null;
+  report: {
+    parseScore: number;
+    qualityScore: number;
+    combinedScore: number;
+    summary: string;
+    sections: {
+      name: string;
+      score: number;
+      status: "good" | "warning" | "critical";
+      findings: string[];
+      tier: "free" | "pro";
+    }[];
+    keywords?: {
+      score: number;
+      found: string[];
+      missing: string[];
+      tier: "pro";
+    };
+    suggestions: {
+      text: string;
+      priority: "high" | "medium" | "low";
+      tier: "free" | "pro";
+    }[];
+  };
+};
+
+type BillingMe = {
+  plan: string;
+  subscriptionStatus: string | null;
+};
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default function AtsReportPage({ params }: PageProps) {
+  const { id } = use(params);
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<AtsReportResponse | null>(null);
+  const [plan, setPlan] = useState<string>("free");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [reportRes, billingRes] = await Promise.all([
+          fetch(`/api/ats/reports/${id}`),
+          fetch("/api/billing/me"),
+        ]);
+
+        if (reportRes.status === 401 || billingRes.status === 401) {
+          router.push("/sign-in");
+          return;
+        }
+
+        if (reportRes.ok) {
+          const json = await reportRes.json();
+          if (!cancelled) setData(json.data as AtsReportResponse);
+        } else if (!cancelled) {
+          router.push("/ats");
+        }
+
+        if (billingRes.ok) {
+          const json = await billingRes.json();
+          const m = json.data as BillingMe;
+          if (!cancelled) setPlan(m.plan ?? "free");
+        }
+      } catch {
+        if (!cancelled) {
+          router.push("/ats");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, router]);
+
+  if (loading || !data) {
+    return (
+      <div className="flex min-h-[60dvh] items-center justify-center md:h-dvh">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const { report } = data;
+  const hasOriginalFile = !!data.resumeFileKey;
+  const isPdf =
+    !!data.resumeFileMimeType &&
+    (data.resumeFileMimeType === "application/pdf" ||
+      data.resumeFileMimeType.toLowerCase().includes("pdf"));
+  const isDocx =
+    !!data.resumeFileMimeType &&
+    (data.resumeFileMimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      (data.resumeFileName || "").toLowerCase().endsWith(".docx"));
+
+  const reportBody = (
+    <div className="flex h-full flex-col gap-4 overflow-auto p-4 md:p-8">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    ATS report ·{" "}
+                    {new Date(data.createdAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                  <h1 className="font-display text-lg font-semibold">
+                    ATS analysis
+                    {data.source === "editor" ? " · Vero resume" : " · Uploaded resume"}
+                  </h1>
+                </div>
+                <div className="flex gap-2">
+                  {data.projectId ? (
+                    <Button size="sm" asChild>
+                      <Link href={`/project/${data.projectId}`}>Open in editor</Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" asChild variant="outline">
+                      <Link href="/dashboard">Open dashboard</Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/ats">New check</Link>
+                  </Button>
+                </div>
+              </div>
+
+              <ScoreSlider
+                parseScore={report.parseScore}
+                qualityScore={report.qualityScore}
+                combinedScore={report.combinedScore}
+              />
+
+              <div className="space-y-2 rounded-2xl border bg-card p-4 text-sm">
+                <p className="text-xs font-medium text-muted-foreground">Summary</p>
+                <p className="text-sm text-foreground">{report.summary}</p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {report.sections.map((section) => (
+                  <ReportSection key={section.name} section={section} plan={plan} />
+                ))}
+              </div>
+
+              <KeywordAnalysisView keywords={report.keywords} plan={plan} />
+
+              <SuggestionList suggestions={report.suggestions} plan={plan} />
+            </div>
+  );
+
+  const previewBody = (
+            <div className="flex h-full flex-col border-l border-border bg-muted/40">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Resume preview</p>
+                  <p className="text-xs text-muted-foreground">
+                    {hasOriginalFile
+                      ? isPdf
+                        ? "This is the original PDF used for ATS parsing."
+                        : isDocx
+                          ? "This is the original DOCX used for ATS parsing."
+                          : "This is the original file used for ATS parsing."
+                      : "This is the plain-text view used for ATS parsing."}
+                  </p>
+                </div>
+              </div>
+              {hasOriginalFile ? (
+                <div className="flex-1 overflow-hidden p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span className="truncate">{data.resumeFileName ?? "resume"}</span>
+                      {!isPdf && !isDocx && (
+                        <span>Preview may be limited for this file type.</span>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-hidden rounded-lg border bg-background">
+                      {isDocx ? (
+                        <DocxPreview
+                          fileUrl={`/api/ats/reports/${data.id}/file`}
+                          className="h-full"
+                        />
+                      ) : (
+                        <iframe
+                          src={`/api/ats/reports/${data.id}/file`}
+                          title="Original resume file"
+                          className="h-full w-full border-0"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-auto p-4">
+                  <pre className="whitespace-pre-wrap break-words text-xs text-foreground">
+                    {data.resumeText}
+                  </pre>
+                </div>
+              )}
+            </div>
+  );
+
+  return (
+    <>
+      {/* Mobile: report only, with a link to the original file */}
+      <div className="md:hidden">
+        {reportBody}
+        {hasOriginalFile && (
+          <div className="px-4 pb-8">
+            <Button variant="outline" className="w-full" asChild>
+              <a href={`/api/ats/reports/${data.id}/file`} target="_blank" rel="noreferrer">
+                Open the original file
+              </a>
+            </Button>
+          </div>
+        )}
+      </div>
+      {/* Desktop: report beside the resume that was scanned */}
+      <ResizablePanelGroup orientation="horizontal" className="hidden h-dvh md:flex">
+        <ResizablePanel defaultSize={55} minSize={35}>
+          {reportBody}
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={45} minSize={25}>
+          {previewBody}
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </>
+  );
+}

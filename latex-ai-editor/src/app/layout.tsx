@@ -5,6 +5,7 @@ import { dark } from "@clerk/themes";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
+import { site } from "@/lib/site";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -18,8 +19,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TeXel - Dashboard",
-  description: "AI-native LaTeX editor for resumes and documents",
+  title: { default: site.name, template: `%s · ${site.name}` },
+  description: site.description,
+  applicationName: site.name,
+  robots: { index: false, follow: false }, // the app is behind sign-in; the marketing site is the indexed one
 };
 
 export default function RootLayout({
@@ -29,6 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
+      afterSignOutUrl="/sign-in"
       appearance={{
         theme: dark,
       }}

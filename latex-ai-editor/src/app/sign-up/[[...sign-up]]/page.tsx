@@ -1,21 +1,17 @@
 import { SignUp } from "@clerk/nextjs";
-import { AuthThemeBar } from "@/components/shared/AuthThemeBar";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { resolvePostAuth } from "@/lib/intents";
+import { authPageParams, ownOrigins } from "@/lib/auth-params";
 
-export default function SignUpPage() {
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function SignUpPage({ searchParams }: Props) {
+  const params = authPageParams(await searchParams);
+  const target = resolvePostAuth(params, await ownOrigins());
+  const query = params.intent ? `?intent=${encodeURIComponent(params.intent)}` : "";
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <AuthThemeBar />
-      <div className="flex flex-1 items-center justify-center p-4">
-        <SignUp
-          appearance={{
-            elements: {
-              rootBox: "mx-auto",
-              card: "shadow-lg",
-            },
-          }}
-          forceRedirectUrl="/dashboard"
-        />
-      </div>
-    </div>
+    <AuthLayout heading="Create your Vero account">
+      <SignUp forceRedirectUrl={target} signInForceRedirectUrl={target} signInUrl={`/sign-in${query}`} />
+    </AuthLayout>
   );
 }

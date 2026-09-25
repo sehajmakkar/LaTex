@@ -4,7 +4,7 @@ import { COMMON_VARIABLES } from "../common";
 export const manifest: TemplateManifest = {
   id: "scholarly",
   name: "Scholarly",
-  description: "Placeholder for a scholarly CV template.",
+  description: "Scholarly CV for research, publications and teaching.",
   category: "Academic",
   tags: ["Top Picks"],
   variables: COMMON_VARIABLES,

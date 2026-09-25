@@ -61,6 +61,8 @@ Vero (currently branded "TeXel") is the **dashboard app**. The marketing site at
 10. **The model invents facts.** Asked to "add a metric", it wrote "processing 100,000+ daily requests…". Nothing in the prompt forbids fabricated numbers, employers, or dates.
 11. **(Found and fixed in step 1.1) lualatex's Lua bypassed the TeX file sandbox.** `openin_any`/`openout_any` don't apply to Lua's `io.open`. A document could read world-readable files, write to `/tmp`, and open the Node server's `/proc/<pid>/environ` and `/proc/<pid>/mem` (where the secret lives), because TeX and Node ran as the same user. Fixed by running each compile as its own Linux user; see 1.1.
 12. **(Found and fixed in step 1.4) A ⌘K edit could fail with a 500 after Gemini had already answered.** Usage rows reference `users(id)`, so a user whose row didn't exist yet (e.g. opened the editor through a direct link) hit a foreign-key error when the edit was counted. The route now creates the user row first, and never discards a finished edit because counting it failed.
+13. **(Found and fixed in Phase 3) Opening a resume could show the previous resume's PDF.** The compiled PDF lived in a global store that was never cleared, so resume B showed resume A's PDF (and Download) until recompiled. It's now reset whenever a project opens.
+14. **(Found and fixed in Phase 3) Sign-in/up ignored where the user was going.** Both pages forced `/dashboard`, dropping `redirect_url` (e.g. from Templates). They now honour same-site `redirect_url` and landing-page intents.
 
 ---
 
@@ -351,35 +353,47 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 
 
 
-### Phase 3: Rebrand to Vero, unified app shell, landing → app flow (≈4–5 days)
+### Phase 3: Rebrand to Vero, unified app shell, landing → app flow ✅ *Implemented 26 Sep 2026. Steps are in `replenish-guide.md`.*
+
+**Design research:** Awwwards, via `awwwards-mcp` (audited, then run in an isolated Docker container). The most relevant references were **Level2** (fintech dashboard: one accent on quiet dark surfaces, hairline-bordered cards, small labels over big numbers, pill badges, slim left rail) and **invoko** (AI app: whitespace, one deep accent, pill CTAs, a 3-link nav). Their layout ideas were adopted; your existing monochrome palette was kept.
 
 **3.1 Rebrand**
 
-- [ ] Replace "TeXel" with "Vero" everywhere: `src/` (17 places), metadata/title, `DEFAULT_LATEX_CONTENT` comments, the service name in `latex-service/package.json`, docs, Clerk app name, Dodo product names and business display name.
-- [ ] Logo component, favicon/app icons, OG image.
+- [x] "TeXel" → "Vero" everywhere in the app (`src/`, metadata with the title template `%s · Vero`, default resume comment, ATS copy, service package name). *(Docs such as README/ARCHITECTURE still say TeXel; see follow-ups.)*
+- [x] Logo: `VeroMark`/`VeroLogo` (a check-shaped "V", *vero* = "true", theme-aware) and `app/icon.svg` replacing `favicon.ico`. **Placeholder until you provide final brand assets** (§1 #9).
+- [ ] OG image: skipped on purpose. The app is behind sign-in and now `noindex`; the marketing site owns sharing previews.
 
 **3.2 One consistent app shell**
 
-- [ ] Replace `DashboardNav`, the editor `Header`, and the ad-hoc headers with **one** `AppShell`:
-  - Top bar: Vero logo → `/dashboard`, then nav **Resumes · Templates · ATS Check · Billing**, a plan badge / "Upgrade" pill, theme toggle, and the user menu.
-  - The editor keeps a compact variant of the same bar (logo, breadcrumb "Resumes / {name}", Compile, Download, share), not a different component.
-- [ ] Move `/templates` and `/ats` into a common layout. Keep `/ats/free` public, but give it the same shell with "Sign in" in place of the user menu.
-- [ ] Declutter the billing page: 3 cards, a monthly/annual toggle (if you want annual), a feature comparison table below, an FAQ.
-- [ ] Declutter the ATS page (full redesign in Phase 4).
-- [ ] Empty, loading, and error states for every page; 404 and 500 pages; basic mobile layout (on mobile the editor shows tabs for Code | Preview | Chat).
+- [x] `AppShell` (`src/components/shell/`) replaces `DashboardNav`, the editor `Header` and `AuthThemeBar` (all deleted). Desktop: a **left sidebar**, a deliberate change from the "top bar" planned above, following the Level2 research, with Resumes · Templates · ATS check · Billing, a **plan card** (usage meters + Upgrade pill, from the new `/api/usage`), "Back to Vero site", theme and user. Mobile: a top bar with a slide-down menu. Signed-out visitors see Templates + ATS check and a "Create free account" card.
+- [x] Editor: a compact `EditorHeader` in the same style: logo mark, breadcrumb "Resumes / {name}" with inline rename, **Saving… / Saved** status, ATS check, Download (named after the resume), Compile, shortcuts menu. Mobile: **Code | Preview tabs**, which switch to Preview after a compile.
+- [x] Routes regrouped with no URL changes: `(app)` (shell: dashboard, templates, ats, ats/free, billing) and `(editor)` (full-screen editor).
+- [x] **Resumes (dashboard):** onboarding for zero resumes (Start from a template · Blank resume · Check an existing resume), resume cards with a menu (Open, Rename, ATS check, Delete **with confirmation**), relative "Edited 3 hours ago", skeleton loading.
+- [x] **Templates:** filter **pills** instead of a dropdown; the 8 "Placeholder…" descriptions replaced with real copy.
+- [x] **ATS (decluttered):** one "Scan a resume" panel with tabs (my resume / upload), a collapsible job description, a recent-reports list with colour-coded scores; `?project=` preselects a resume. The report page uses the shell (desktop split, mobile single column). The scoring engine is unchanged (Phase 4).
+- [x] **Billing:** Free vs **Pro $5.99** (limits from `plans.ts`), comparison table, FAQ; Pro Plus removed from the UI.
+- [x] **Billing success:** polls until the webhook activates Pro (≤ 30 s), then confirms. *(Pulled forward from Phase 2.)*
+- [x] Empty/loading/error states; branded **404** and **error** pages.
 
 **3.3 Landing → dashboard flow**
 
-- [ ] Landing CTAs (in the landing repo) → `https://app.<domain>/sign-up?intent=…`, using intents such as `start` / `template=<id>` / `ats` / `plan=pro`.
-- [ ] Dashboard `/`: no mini landing page any more. Signed out → `/sign-in`, signed in → `/dashboard`. Keep the `intent` through sign-up and act on it afterwards (open the template, open ATS, open checkout).
-- [ ] First-run onboarding on `/dashboard` for users with zero projects: three big choices, **Import my existing resume**, **Start from a template**, **Blank document**. The import option needs the Phase 7 importer; until then show just the other two.
-- [ ] A "Back to site" link and a consistent footer (Terms, Privacy, Support).
+- [x] `/` has no mini landing page any more: signed in → `/dashboard`, signed out → `/sign-in`, keeping `?intent=`.
+- [x] **Intents** (`src/lib/intents.ts`, whitelisted, unit-tested): `start` · `ats` · `pro` · `template:<id>`. They survive sign-up (Clerk `forceRedirectUrl` → `/dashboard?intent=…`) and `IntentHandler` acts once: open ATS, start Pro checkout, or create the resume from the template.
+- [x] Sign-in/up: branded split layout (product promise + "Back to site"); they honour same-site `redirect_url` (open-redirect-safe).
+- [x] "Back to site" link in the shell and auth pages; Support link if `NEXT_PUBLIC_SUPPORT_EMAIL` is set.
+- [ ] **Landing CTAs (you, in the landing repo):** point them at the app with intents; the exact URLs are in the guide.
+- [ ] Terms/Privacy footer links: wait for the legal pages (Phase 6).
 
-**Done when:** a new visitor goes landing → sign-up → onboarding → editor without dead ends, and every page shares one nav.
+**Verified:** `tsc` clean · `eslint` 0 errors · Vitest 27/27 (5 new intent/redirect tests) · `npm run build` passes · screenshots of the public pages (Templates, free ATS, sign-in/up) at 1440 px and 390 px in dark mode, and the `/?intent=ats` → `/sign-up?intent=ats` redirect. **Signed-in pages were not viewed in a browser** (per your earlier preference); see the guide's checklist.
 
----
-
-
+**Follow-ups found in Phase 3** (by priority):
+- [ ] **(Medium, you)** Final Vero logo/brand assets; the current mark is a placeholder.
+- [ ] **(Medium, Phase 4)** `/ats/free` still uses a raw file input and pro-locked teaser copy; it's rebuilt with the anonymous ATS check. Signed-out visitors are sent to sign-up (`intent=ats`) instead of hitting the broken API.
+- [ ] **(Low)** Clerk's widget is always dark (`@clerk/themes` `dark`), even in light mode. Switch its theme with `next-themes`.
+- [ ] **(Low)** Signed-out visitors to an unknown URL are sent to sign-in (the middleware protects all non-public paths) instead of the 404 page. Signed-in users get the 404.
+- [ ] **(Low)** Docs (`README.md`, `ARCHITECTURE.md`, `GUIDE.md`, deployment docs) still say TeXel and describe the old structure.
+- [ ] **(Low)** Resume cards show a generic page illustration. Real thumbnails need a stored render of each resume's first page (after the PDF storage work).
+- [ ] **(Low, Phase 5)** The editor autosaves once right after opening (content load triggers the debounce). Harmless, but a wasted write.
 
 ### Phase 4: Rebuild ATS as a free tool (≈4–5 days)
 

@@ -4,7 +4,7 @@ import { COMMON_VARIABLES } from "../common";
 export const manifest: TemplateManifest = {
   id: "project-highlights",
   name: "Project Highlights",
-  description: "Placeholder for a project-focused resume template.",
+  description: "Puts your projects up front: great for students, new grads and builders.",
   category: "Developer",
   tags: ["Top Picks"],
   variables: COMMON_VARIABLES,
