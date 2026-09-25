@@ -1,6 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+import { getGeminiModel } from "@/lib/gemini";
 
 const LATEX_SYSTEM_PROMPT = `You are an expert LaTeX editor. You receive a fragment of LaTeX source and a user instruction, and you output the rewritten fragment.
 
@@ -38,8 +36,7 @@ function stripCodeFences(text: string): string {
 
 class AIService {
   private getModel() {
-    return genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    return getGeminiModel({
       systemInstruction: LATEX_SYSTEM_PROMPT,
       generationConfig: {
         temperature: 0.2,

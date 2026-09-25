@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getGeminiModel } from "@/lib/gemini";
 
 export type LLMSuggestion = {
   text: string;
@@ -10,8 +10,6 @@ export type LLMResult = {
   summary: string;
   suggestions: LLMSuggestion[];
 };
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const ATS_LLM_SYSTEM_PROMPT = `You are an expert technical recruiter and resume reviewer.
 You receive the plain-text content of a candidate's resume and (optionally) a job description.
@@ -37,8 +35,7 @@ Rules:
 
 export class LLMAtsService {
   private getModel() {
-    return genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    return getGeminiModel({
       systemInstruction: ATS_LLM_SYSTEM_PROMPT,
       generationConfig: {
         temperature: 0.3,

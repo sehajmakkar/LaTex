@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { Play, FileDown, Settings, Sparkles, FileCode2, ArrowLeft, Target } from "lucide-react";
@@ -27,9 +27,6 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
   const { pdfUrl } = useEditorStore();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(projectName);
-  useEffect(() => {
-    if (!isEditingName) setEditName(projectName);
-  }, [projectName, isEditingName]);
 
   const handleNameSave = useCallback(() => {
     const trimmed = editName.trim();
@@ -76,7 +73,10 @@ export function Header({ projectName, onCompile, isCompiling, backHref, onRename
           ) : (
             <button
               type="button"
-              onClick={() => setIsEditingName(true)}
+              onClick={() => {
+                setEditName(projectName);
+                setIsEditingName(true);
+              }}
               className="text-sm font-medium truncate hover:underline text-left max-w-[200px] text-foreground/80"
             >
               {projectName}

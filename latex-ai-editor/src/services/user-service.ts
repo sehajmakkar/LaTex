@@ -1,7 +1,6 @@
 import { userRepository } from "@/repositories/user-repository";
 import { NotFoundError } from "@/lib/errors";
 import { FREE_PROJECT_LIMIT } from "@/lib/constants";
-import type { NewUser } from "@/lib/db/schema";
 
 class UserService {
   async ensureUser(clerkId: string, email: string, name: string | null) {

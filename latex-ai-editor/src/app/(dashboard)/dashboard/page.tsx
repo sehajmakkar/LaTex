@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileCode2, FileText, Plus, Loader2, Trash2, Pencil, CreditCard } from "lucide-react";
+import { FileText, Plus, Loader2, Trash2, Pencil, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,

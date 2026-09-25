@@ -42,7 +42,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       "application/octet-stream";
     const fileName = row.resumeFileName || "resume";
 
-    return new NextResponse(body as any, {
+    return new NextResponse(body.transformToWebStream(), {
       status: 200,
       headers: {
         "Content-Type": contentType,

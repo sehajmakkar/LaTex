@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { atsRepository } from "@/repositories/ats-repository";
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) {

@@ -36,8 +36,8 @@ async function handleAIPrompt({
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || "AI edit failed");
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.error?.message || `AI edit failed (${response.status})`);
   }
 
   const reader = response.body?.getReader();
@@ -46,36 +46,39 @@ async function handleAIPrompt({
   }
 
   const decoder = new TextDecoder();
+  let buffer = "";
   let result = "";
 
-  while (true) {
+  // SSE events are separated by a blank line; a network chunk can end mid-event,
+  // so keep the unfinished tail in `buffer` until the rest arrives.
+  readLoop: while (true) {
     const { done, value } = await reader.read();
     if (done) break;
+    buffer += decoder.decode(value, { stream: true });
 
-    const chunk = decoder.decode(value);
-    const lines = chunk.split("\n");
+    let boundary: number;
+    while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+      const event = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      if (!event.startsWith("data: ")) continue;
 
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = line.slice(6);
-        if (data === "[DONE]") {
-          break;
-        }
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.content) {
-            result += parsed.content;
-          }
-          if (parsed.error) {
-            throw new Error(parsed.error);
-          }
-        } catch {
-          // Skip invalid JSON
-        }
+      const data = event.slice(6);
+      if (data === "[DONE]") break readLoop;
+
+      let parsed: { content?: string; error?: string };
+      try {
+        parsed = JSON.parse(data);
+      } catch {
+        continue;
       }
+      if (parsed.error) throw new Error(parsed.error);
+      if (parsed.content) result += parsed.content;
     }
   }
 
+  if (!result.trim()) {
+    throw new Error("The AI returned an empty edit. Nothing was changed.");
+  }
   return result;
 }
 

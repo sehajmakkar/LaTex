@@ -58,11 +58,11 @@ export default function AtsIndexPage() {
 
         if (projectsRes.ok) {
           const json = await projectsRes.json();
-          const list = (json.data as any[]) ?? [];
+          const list = (json.data as ProjectSummary[] | undefined) ?? [];
           setProjects(
             list.map((p) => ({
-              id: p.id as string,
-              name: p.name as string,
+              id: p.id,
+              name: p.name,
             }))
           );
         }

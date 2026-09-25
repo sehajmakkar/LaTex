@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Check, FileCode2, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";

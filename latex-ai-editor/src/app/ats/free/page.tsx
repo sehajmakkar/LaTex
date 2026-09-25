@@ -127,7 +127,7 @@ export default function FreeAtsPage() {
         setError(analyzeJson.error?.message ?? "Failed to run ATS analysis.");
         return;
       }
-      const full = analyzeJson.data?.report as any;
+      const full = analyzeJson.data?.report as FreeReport | undefined;
       if (!full) {
         setError("No report returned from ATS analysis.");
         return;
@@ -137,7 +137,7 @@ export default function FreeAtsPage() {
         parseScore: full.parseScore ?? 0,
         qualityScore: full.qualityScore ?? 0,
         summary: full.summary ?? "",
-        suggestions: (full.suggestions as any[])?.slice(0, 3) ?? [],
+        suggestions: full.suggestions?.slice(0, 3) ?? [],
       };
       setReport(teaser);
     } catch {

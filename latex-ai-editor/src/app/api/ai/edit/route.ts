@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { aiService } from "@/services/ai-service";
+import { isGeminiConfigured } from "@/lib/gemini";
 
 const AIEditRequestSchema = z.object({
   selection: z.string(),
@@ -11,7 +12,7 @@ const AIEditRequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.GEMINI_API_KEY) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
         {
           error: {
@@ -48,10 +49,33 @@ export async function POST(req: NextRequest) {
       prompt,
     });
 
+    // Pull the first chunk before responding so provider failures (bad key,
+    // retired model, quota) come back as a real HTTP error, not a silent stream.
+    let first: IteratorResult<string>;
+    try {
+      first = await stream.next();
+    } catch (error) {
+      console.error("AI provider error:", error);
+      return NextResponse.json(
+        {
+          error: {
+            code: "AI_PROVIDER_ERROR",
+            message: "The AI service is unavailable right now. Please try again.",
+          },
+        },
+        { status: 502 },
+      );
+    }
+
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
       async start(controller) {
         try {
+          if (!first.done && first.value) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ content: first.value })}\n\n`),
+            );
+          }
           for await (const chunk of stream) {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`),
@@ -63,7 +87,7 @@ export async function POST(req: NextRequest) {
           console.error("Stream error:", error);
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ error: "Stream failed" })}\n\n`,
+              `data: ${JSON.stringify({ error: "The AI response was interrupted. Please try again." })}\n\n`,
             ),
           );
           controller.close();
