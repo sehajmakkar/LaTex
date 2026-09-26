@@ -45,6 +45,7 @@ export const userUsage = pgTable("user_usage", {
   compiles: integer("compiles").notNull().default(0),
   aiEdits: integer("ai_edits").notNull().default(0),
   atsScans: integer("ats_scans").notNull().default(0),
+  aiCommands: integer("ai_commands").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -68,6 +69,36 @@ export const atsReports = pgTable("ats_reports", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+/** AI command bar conversation, per project (Phase 5). */
+export const aiMessages = pgTable("ai_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // "user" | "assistant"
+  content: text("content").notNull(),
+  edits: text("edits"), // JSON of proposed edits (assistant only)
+  status: text("status"), // "pending" | "accepted" | "partial" | "rejected" (assistant only)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/** Snapshots of a project's source, taken before AI changes are applied (Phase 5). */
+export const projectVersions = pgTable("project_versions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  label: text("label").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Project = typeof projects.$inferSelect;
@@ -77,4 +108,6 @@ export type NewCompilation = typeof compilations.$inferInsert;
 export type UserUsage = typeof userUsage.$inferSelect;
 export type NewUserUsage = typeof userUsage.$inferInsert;
 export type ATSReport = typeof atsReports.$inferSelect;
+export type AiMessage = typeof aiMessages.$inferSelect;
+export type ProjectVersion = typeof projectVersions.$inferSelect;
 export type NewATSReport = typeof atsReports.$inferInsert;

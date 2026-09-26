@@ -60,6 +60,7 @@ export function PlanCard({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <Meter label="Resumes" used={data.usage.projects} limit={data.limits.projects} />
       <Meter label="AI edits" used={data.usage.aiEdits} limit={data.limits.aiEditsPerMonth} />
+      <Meter label="AI commands" used={data.usage.aiCommands} limit={data.limits.aiCommandsPerMonth} />
       <Button size="sm" className="h-8 rounded-full" asChild>
         <Link href="/billing" onClick={onNavigate}>
           <Sparkles className="h-3.5 w-3.5" />

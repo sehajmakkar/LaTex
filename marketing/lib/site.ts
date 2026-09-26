@@ -33,6 +33,6 @@ export const appLinks = {
 }
 
 export const pricing = {
-  free: { resumes: 3, aiEditsPerMonth: 40 },
-  pro: { price: "$5.99", aiEditsPerMonth: 1000 },
+  free: { resumes: 3, aiEditsPerMonth: 40, aiCommandsPerMonth: 10 },
+  pro: { price: "$5.99", aiEditsPerMonth: 1000, aiCommandsPerMonth: 120 },
 }

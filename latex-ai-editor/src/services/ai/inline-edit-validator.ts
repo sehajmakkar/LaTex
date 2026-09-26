@@ -13,6 +13,8 @@ export type ValidationInput = {
   instruction: string;
   /** Surrounding source the model saw; numbers found here are not "invented". */
   context?: string;
+  /** Allow new \\usepackage / macro definitions (preamble layout edits the user asked for). */
+  allowStructural?: boolean;
 };
 
 /** Never allowed unless already present in the selection: file, shell, Lua, catcode tricks. */
@@ -107,12 +109,23 @@ export function numbersIn(text: string): Set<string> {
   return new Set((text.match(/\d+(?:[.,]\d+)*/g) ?? []).map((n) => n.replace(/,/g, "")));
 }
 
+/**
+ * Layout values (10pt, 0.6in, 0.9\textwidth, \linespread{0.95}) are not facts
+ * about the person, so the no-new-numbers rule ignores them.
+ */
+const LAYOUT_NUMBER =
+  /-?\d*\.?\d+(?:pt|em|ex|in|cm|mm|bp|pc|sp)\b|-?\d*\.?\d+\s*\\(?:text|line|column|paper)(?:width|height)\b|\\(?:linespread|fontsize)\s*\{[\d.\s]*\}(?:\s*\{[\d.\s]*\})?|\\baselinestretch\s*\}\s*\{[\d.\s]*\}/g;
+
+export function factualNumbersIn(text: string): Set<string> {
+  return numbersIn(text.replace(LAYOUT_NUMBER, " "));
+}
+
 const sameMap = (a: Map<string, number>, b: Map<string, number>) => {
   const keys = new Set([...a.keys(), ...b.keys()]);
   return [...keys].every((k) => (a.get(k) ?? 0) === (b.get(k) ?? 0));
 };
 
-export function validateInlineEdit({ output, selection, instruction, context = "" }: ValidationInput): ValidationResult {
+export function validateInlineEdit({ output, selection, instruction, context = "", allowStructural = false }: ValidationInput): ValidationResult {
   const replacement = stripFences(output);
 
   if (!replacement.trim()) {
@@ -138,7 +151,7 @@ export function validateInlineEdit({ output, selection, instruction, context = "
     return { ok: false, reason: "The replacement adds ^^ character escapes, which are not allowed." };
   }
   for (const [name, askedFor] of Object.entries(STRUCTURAL_COMMANDS)) {
-    if ((out.commands.get(name) ?? 0) > (sel.commands.get(name) ?? 0) && !askedFor.test(instruction)) {
+    if ((out.commands.get(name) ?? 0) > (sel.commands.get(name) ?? 0) && !allowStructural && !askedFor.test(instruction)) {
       return { ok: false, reason: `The replacement adds \\${name}, but the instruction didn't ask for it.` };
     }
   }
@@ -168,7 +181,7 @@ export function validateInlineEdit({ output, selection, instruction, context = "
   }
 
   const allowed = numbersIn(`${selection}\n${instruction}\n${context}`);
-  const invented = [...numbersIn(replacement)].filter((n) => !allowed.has(n));
+  const invented = [...factualNumbersIn(replacement)].filter((n) => !allowed.has(n));
   if (invented.length > 0) {
     return {
       ok: false,

@@ -305,6 +305,9 @@ Signed-in users following any of these skip sign-up and land straight on the act
 | 12 | | |
 | 13 | | |
 | 14 | | |
+| 14b | | |
+| 14c | | |
+| 14d | | |
 | 15 | | |
 | 16 | | |
 
@@ -459,3 +462,78 @@ Restart `npm run dev`. No new env vars or database changes. (`R2_*` must be set 
 | 11 | | |
 | 12 | | |
 | 13 | | |
+
+---
+
+## Step: Phase 5, AI command bar (26 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Command bar | Floating chat input at the bottom of the code pane (⌘I). Scope menu (whole / selection / section), quick actions (Tailor to a job, Stronger bullets, Fit on one page, Fix compile error), conversation panel, version history menu, "N left" counter | `src/components/editor/CommandBar.tsx`, `src/hooks/use-ai-commands.ts` |
+| Diff review | AI changes show as an inline diff in the editor with **Keep / Undo** on each change and **Keep all / Undo all**; like ⌘K, **Compile works during review** and previews the AI version without saving it (Undo re-renders the original); autosave pauses during review; ⌘Z undoes an applied change | `src/components/editor/ai-review.ts`, `CodeMirrorEditor.tsx`, `EditorPane.tsx` |
+| After keeping | Pre-AI version snapshot → save → auto-recompile → if the build breaks, one automatic "fix the compile error" command | `src/app/(editor)/project/[id]/page.tsx` |
+| AI + safety | `aiService.command()` (gemini-3.6-flash, JSON schema); every `{find, replace}` edit is verified: unique, in scope, preamble only when asked, no invented numbers, **no job skills the resume doesn't show**, no dangerous commands/packages, no prompt leaks; one retry with reasons | `src/services/ai/command-prompt.ts`, `command-edits.ts`, `src/services/ai-service.ts` |
+| API | `POST /api/ai/command`, `PATCH /api/ai/command/[messageId]`, `GET /api/projects/[id]/ai-messages`, `GET/POST /api/projects/[id]/versions`, `GET /api/projects/[id]/versions/[versionId]` | `src/app/api/...` |
+| Data | `ai_messages`, `project_versions`, `user_usage.ai_commands` (**already applied to Neon**) | `src/lib/db/schema.ts`, `drizzle/manual/2026-09-26-ai-command-bar.sql` |
+| Limits | Free 10 / Pro 120 AI commands a month; versions kept Free 3 / Pro 100; shown in the plan card, billing page and marketing pricing | `src/lib/plans.ts`, `PlanCard.tsx`, `billing/page.tsx`, `marketing/...pricing-section.tsx` |
+| Also | ⌘K validator now allows layout lengths (`0.5in`, `-4pt`, `\linespread{0.95}`); editor no longer autosaves right after opening | `inline-edit-validator.ts`, project page |
+
+### What I already verified
+- **Unit tests 68/68** (`npm test`): edit verification, tailoring guard, compile-fix balance, prompt leaks, section parsing, rebasing, plus **6 headless editor tests** of the diff review (keep all, undo all, partial, auto-finish, ⌘Z).
+- **Eval 60/60** (`npx tsx --env-file=.env --tsconfig tsconfig.json scripts/eval-command.ts`): 20 instructions × 3 templates; every applied result compiled on Railway; no invented numbers or job-only skills; attacks blocked; questions returned no edits; broken documents fixed. Avg 4.0 s, p90 6.3 s.
+- **End-to-end API 13/14** (dev server, temporary Clerk user, deleted afterwards along with its DB rows): edits + messageId + remaining, compile of the result, history + status, version snapshot/restore and pruning to 3, section scope, broken compile → AI fix → compiles, question → no edits, bad range 400, other user's project/message 404, usage counter, 429 with Upgrade at the limit. The miss is the timing: 10.5 s for command + compile (target ~10 s).
+- `tsc`, ESLint (0 errors), `npm run build`.
+
+### Setup
+Restart `npm run dev` (new dependency `@codemirror/merge` is already in `package.json`; run `npm install` if the import fails). No new env vars. The database changes are already applied.
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | Open a resume | Command bar at the bottom of the code pane: quick-action chips, "Ask Vero to edit your resume… ⌘I", scope "Whole resume", "10 left" (free) |
+| 2 | Press ⌘I anywhere in the editor | The command bar input gets focus |
+| 3 | Type "Add a Projects entry for Vero, built with Next.js and Gemini" → Enter | "Editing your resume…", then Vero's message in the panel and a **green/red diff in the code** with Keep/Undo buttons; the bar turns into "Review N changes · Undo all / Keep all" |
+| 4 | Click **Keep all** | Diff disappears, "Compiling…" toast, PDF refreshes with the new project; message shows "Kept" |
+| 5 | Press ⌘Z in the editor | The AI change is undone |
+| 6 | Run another command, click **Keep** on one change and **Undo** on another | Review ends by itself after the last one; message shows "Partly kept"; only the kept change remains |
+| 7 | Run a command and click **Undo all** | Text back to before; "AI changes undone"; nothing recompiles |
+| 8 | Select one bullet, click into the bar | Scope switches to "Selection"; "Rewrite this with a stronger verb" only changes that bullet |
+| 9 | Scope menu → pick a section → "Shorten this section" | Only that section changes |
+| 10 | **Tailor to a job** → paste a JD that asks for a skill you don't have → send | Existing experience reworded toward the JD; the missing skill is **suggested in the message, not added** |
+| 11 | Break the LaTeX (delete a `}`), press Compile | Compile error, then a red **Fix compile error** chip appears → click it → diff → Keep → compiles |
+| 12 | Ask "What's the weakest part of my resume?" | An answer in the panel, no diff |
+| 13 | History (clock) button in the bar | "Before: …" snapshots; pick one → resume restored (⌘Z goes back) |
+| 14 | While a diff is open, press **Compile** | PDF shows the AI version; toast "Preview compiled. The AI changes aren't saved until you keep them."; the diff stays open |
+| 14b | Then **Undo all** | PDF re-renders the original automatically |
+| 14c | Run a command, Compile (preview), then **Keep all** | Saved; no second compile (the preview PDF is already current). If you edit or undo some changes first, it recompiles |
+| 14d | Mobile: diff open → tap **Preview** → back to **Code** | Preview works; the diff is still there when you come back |
+| 15 | Dark mode | Diff colours and Keep/Undo buttons readable |
+| 16 | Mobile width | Bar fits the screen, chips scroll sideways, the last code lines aren't hidden behind the bar |
+| 17 | Sidebar plan card / `/billing` | "AI commands" meter and 10 / 120 per month in the comparison |
+| 18 | Use up the free commands (or set `ai_commands = 10` for your row in `user_usage`) | Error toast "AI command limit reached" with **Upgrade** |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |
+| 8 | | |
+| 9 | | |
+| 10 | | |
+| 11 | | |
+| 12 | | |
+| 13 | | |
+| 14 | | |
+| 14b | | |
+| 14c | | |
+| 14d | | |
+| 15 | | |
+| 16 | | |
+| 17 | | |
+| 18 | | |

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
 import { EditorSkeleton } from "./EditorSkeleton";
-import type { FixRequest } from "./CodeMirrorEditor";
+import type { EditorApi, FixRequest, ReviewOutcome } from "./CodeMirrorEditor";
 import {
   Tooltip,
   TooltipContent,
@@ -24,10 +24,14 @@ type EditorPaneProps = {
   onChange: (value: string) => void;
   fixRequest?: FixRequest | null;
   onFixHandled?: () => void;
+  onReady?: (api: EditorApi | null) => void;
+  onReviewEnd?: (outcome: ReviewOutcome, original: string) => void;
   className?: string;
+  /** Overlay rendered over the bottom of the editor (the AI command bar). */
+  children?: React.ReactNode;
 };
 
-export function EditorPane({ value, onChange, className, fixRequest, onFixHandled }: EditorPaneProps) {
+export function EditorPane({ value, onChange, className, fixRequest, onFixHandled, onReady, onReviewEnd, children }: EditorPaneProps) {
   return (
     <div className="flex h-full flex-col bg-background">
       <div className="flex items-center justify-between border-b border-border bg-background/70 px-4 py-2">
@@ -63,8 +67,17 @@ export function EditorPane({ value, onChange, className, fixRequest, onFixHandle
           </Tooltip>
         </TooltipProvider>
       </div>
-      <div className="flex-1 overflow-hidden">
-        <CodeMirrorEditor value={value} onChange={onChange} className={className} fixRequest={fixRequest} onFixHandled={onFixHandled} />
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <CodeMirrorEditor
+          value={value}
+          onChange={onChange}
+          className={className}
+          fixRequest={fixRequest}
+          onFixHandled={onFixHandled}
+          onReady={onReady}
+          onReviewEnd={onReviewEnd}
+        />
+        {children}
       </div>
     </div>
   );

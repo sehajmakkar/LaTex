@@ -393,7 +393,7 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 - [ ] **(Low)** Signed-out visitors to an unknown URL are sent to sign-in (the middleware protects all non-public paths) instead of the 404 page. Signed-in users get the 404.
 - [ ] **(Low)** Docs (`README.md`, `ARCHITECTURE.md`, `GUIDE.md`, deployment docs) still say TeXel and describe the old structure.
 - [ ] **(Low)** Resume cards show a generic page illustration. Real thumbnails need a stored render of each resume's first page (after the PDF storage work).
-- [ ] **(Low, Phase 5)** The editor autosaves once right after opening (content load triggers the debounce). Harmless, but a wasted write.
+- [x] **(Low, Phase 5)** The editor autosaves once right after opening (content load triggers the debounce). Harmless, but a wasted write. *Fixed in Phase 5: autosave skips content that matches the last saved text.*
 
 ### Phase 3.4: Marketing site in this repo, then its rework (≈3–4 days)
 
@@ -505,32 +505,42 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 
 ### Phase 5: AI command bar, the third way to edit (≈6–8 days)
 
+✅ *Implemented 26 Sep 2026. Unit tests 68/68 (incl. 6 headless editor-review tests), eval **60/60**, end-to-end API 13/14 (the miss is the 10 s target, at 10.5 s). Steps are in `replenish-guide.md`.*
+
 Users then have three ways to edit: **(1) code by hand, (2) inline ⌘K on a selection, (3) a chat-style command bar**.
 
-**UX**
+**UX** (`src/components/editor/CommandBar.tsx`, `src/hooks/use-ai-commands.ts`)
 
-- A floating input centered at the bottom of the editor page, spanning both panes (like Cursor, v0, or ChatGPT). Placeholder: *"Ask Vero to change your resume… e.g. 'Make my Google internship bullets more quantified'"*.
-- Scope chips: **Whole resume** (default) · **Selection** (auto when text is selected) · **Section ▾** (parsed from `\section{}`).
-- Quick actions above the bar when it's empty: *Tailor to a job description* · *Fit to one page* · *Fix compile error* (shown only after a failed compile) · *Improve bullet impact*.
-- Response: a short explanation, then **the diff shown inline in the code editor** (green/red, reusing `@codemirror/merge`'s unified view), with Accept all / Reject / per-hunk accept. On accept, the document **recompiles automatically**. If the compile fails, the error log goes back to the model once for an automatic fix.
-- A collapsible history panel per project, and **Undo** (⌘Z works because edits are CodeMirror transactions).
+- [x] A floating input at the bottom centre of the code pane (⌘I focuses it). It sits over the editor, not across both panes, so the PDF stays visible. Placeholder: *"Ask Vero to edit your resume… ⌘I"*.
+- [x] Scope menu: **Whole resume** (default) · **Selected text** (picked automatically when text is selected as you focus the bar) · each **section** parsed from `\section{}`/`\section*{}`.
+- [x] Quick actions when the input is empty: *Tailor to a job* (opens a JD box) · *Stronger bullets* · *Fit on one page* · *Fix compile error* (only after a failed compile, and sends the log).
+- [x] The answer appears in a collapsible conversation panel; **the diff is shown inline in the code editor** (`@codemirror/merge` unified view, green/red, unchanged stretches collapsed) with **Keep / Undo on every change** plus **Keep all / Undo all**. Like ⌘K, **Compile works during a review**: it previews the AI version without saving it, and Undo re-renders the original. Autosave pauses during a review. On mobile the editor stays mounted, so switching to Preview keeps the diff.
+- [x] After keeping changes: a version snapshot of the pre-AI text is saved, the resume saves and **recompiles automatically**, and if that compile fails the log is sent back to the AI **once** for a fix.
+- [x] Conversation is stored per resume (last 30 shown); **version history** menu restores snapshots (the current text is snapshotted first); **⌘Z** undoes an applied AI change.
+- [x] Plan card and billing page show AI command usage and limits; the marketing pricing matches.
 
 **Backend**
 
-- [ ] `POST /api/ai/command` (SSE): input is the full document, scope, instruction, the last N messages, and (optional) JD and last compile log. The model returns **structured edits**, not a rewritten document:
-  ```json
-  { "message": "Quantified 3 bullets under Experience.",
-    "edits": [ { "find": "<exact existing text>", "replace": "<new text>" } ] }
-  ```
-  The server checks that each `find` occurs exactly once (otherwise it re-asks with more context), and the client applies the edits as one transaction. This is cheaper, safer, and diffable, and it avoids the model "rewriting" parts you didn't ask about.
-- [ ] Migrate to the `@google/genai` SDK. Use JSON schema output and one shared LaTeX system prompt, with rules about escaping (`&`, `%`, `#`), not touching the preamble unless asked, and preserving custom macros such as `\resumeItem`.
-- [ ] New tables: `ai_messages` (projectId, role, content, edits JSON, accepted) and `project_versions` (snapshot on each accepted AI command plus manual "Save version").
-- [ ] Metering: `user_usage.ai_edits` / a new `ai_commands` counter, limits from `plans.ts`. This is the main Pro feature.
-- [ ] Evals: 20 canned instructions × 3 templates. Check that the result compiles, that only the targeted region changed, and that nothing was invented (no new employers or degrees).
+- [x] `POST /api/ai/command` returns plain JSON (not SSE: a command takes ~4 s on average, like ⌘K). Input: document (≤ 60k chars), instruction (≤ 1,000), scope, last 8 messages, optional JD (≤ 10k) and compile log. The model returns `{message, edits:[{find, replace}]}` (JSON schema, `gemini-3.6-flash`, thinking LOW, 45 s timeout).
+- [x] **Every edit is verified server-side** (`src/services/ai/command-edits.ts`): `find` must occur exactly once, lie inside the scope, not overlap another edit; the preamble is editable only for layout/font/spacing/package requests or compile fixes; deletions need a delete/shorten intent and must be balanced; replacements pass the ⌘K validator (dangerous commands, balance, escaping, **no invented numbers**; layout lengths like `0.5in` are allowed now); **no job-description skills the resume doesn't show** (Kubernetes etc. get suggested in the message instead); blocked packages (`shellesc`, `minted`, `luacode`, …); no system-prompt text. Rejected edits go back to the model once with the reasons; any still invalid are dropped and counted as "skipped".
+- [x] The client re-locates edits if the user typed while the AI was working, and drops the ones that no longer match.
+- [x] Tables `ai_messages` (role, content, edits JSON, status pending/accepted/partial/rejected) and `project_versions` (snapshots, pruned to the plan's allowance), plus `user_usage.ai_commands`. Applied with `drizzle/manual/2026-09-26-ai-command-bar.sql` (additive).
+- [x] Routes: `PATCH /api/ai/command/[messageId]` (status), `GET /api/projects/[id]/ai-messages`, `GET|POST /api/projects/[id]/versions`, `GET /api/projects/[id]/versions/[versionId]`. All check ownership.
+- [x] Metering from `plans.ts`: Free **10/month**, Pro **120/month**, burst 6/10 per minute; 429 with Upgrade. Versions kept: Free 3, Pro 100. Every call logs `{event:"ai_command", scope, edits, skipped, skippedReasons, attempts, ms, tokens}`.
+- [x] Evals (`scripts/eval-command.ts`): 20 instructions × 3 templates, checking that the result compiles on Railway, scoped commands change nothing outside the scope, no new numbers or job-only skills appear, attacks add nothing dangerous, questions get no edits, and broken documents get fixed. **60/60** on `gemini-3.6-flash` (avg 4.0 s, p90 6.3 s, ~1.2k in / ~0.43k out tokens ≈ $0.005 per command at 2027 prices).
+
+**Follow-ups found while testing Phase 5** (by priority):
+- [ ] **(Medium, Phase 5)** "Done when" timing: *add a Projects entry → diff → keep → PDF* took **10.5 s** through the local dev server (8.4 s AI + 2.1 s compile), just over the ~10 s target; direct calls average 4 s. Measure on Vercel production; if it's still slow, stream the message first (SSE) or try thinking MINIMAL.
+- [ ] **(Medium, 1.2)** Signed-out calls to the new routes get the HTML 404 page instead of JSON 401 (same middleware issue as B15).
+- [ ] **(Low)** `gemini-3.1-flash-lite` is **not** good enough for the command bar: in 30 eval cases it failed 6 (it can't copy `find` text exactly, and once wrote the system prompt into the resume, which the new leak guard now blocks). Keep 3.6-flash.
+- [ ] **(Low)** Pro version history is "keep the last 100" rather than §7's "unlimited, 90 days". There's no manual **Save version** button yet (snapshots happen before AI changes and before restores).
+- [ ] **(Low)** `ai_messages` grows without limit per resume; prune to the last ~100 per project, and add "Clear conversation".
+- [ ] **(Low)** The eval checks safety, scope and compiling, not writing quality (the 1.4 LLM-judge item still applies). Seen: "Rewrite this with a stronger verb" on a finance bullet turned "Deliver" into "Provide strategic".
+- [ ] **(Low)** Browser check of the command bar, diff styling (light/dark), and mobile layout still needed (see guide).
 
 **Later extension (Phase 7):** click on the PDF to select that part of the source (SyncTeX + pdf.js viewer), so "change *this*" works by pointing.
 
-**Done when:** you can type "add a Projects entry for Vero, built with Next.js and Gemini", see a diff, accept, and get a recompiled PDF in under about 10 s, with limits enforced.
+**Done when:** you can type "add a Projects entry for Vero, built with Next.js and Gemini", see a diff, accept, and get a recompiled PDF in under about 10 s, with limits enforced. *(All true except the timing: 10.5 s on the dev server, see the follow-up.)*
 
 ---
 
@@ -636,7 +646,7 @@ Based on Overleaf, Rezi, Teal, Jobscan, Enhancv, FlowCV, and Kickresume:
 | Action                             | Tokens (in / out) | Model             | Cost per action                  |
 | ---------------------------------- | ----------------- | ----------------- | -------------------------------- |
 | Inline ⌘K edit                     | ~1.5k / ~350      | 3.1-flash-lite    | **~$0.001** (3.6-flash: ~$0.005) |
-| AI command bar (whole resume)      | ~8k / ~1.5k       | 3.6-flash         | **~$0.024**                      |
+| AI command bar (whole resume)      | ~8k / ~1.5k       | 3.6-flash         | **~$0.024** (measured in the Phase 5 eval: ~1.2k / ~0.43k on a template, ≈ $0.005; real resumes are longer) |
 | ATS AI content review              | ~4.5k / ~2.5k     | 3.6-flash         | **~$0.026**                      |
 | ATS JD skill extraction            | ~1.5k / ~500      | 3.1-flash-lite    | ~$0.001                          |
 | ATS parse check + keyword matching | —                 | none (rule-based) | **$0**                           |

@@ -27,6 +27,7 @@ type EditorHeaderProps = {
 };
 
 const SHORTCUTS = [
+  ["⌘ I", "Ask Vero to edit the resume"],
   ["⌘ K", "AI edit on the selection"],
   ["⌘ Y", "Accept the AI edit"],
   ["⌘ U", "Reject the AI edit"],

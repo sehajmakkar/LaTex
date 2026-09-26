@@ -45,7 +45,8 @@ export type InlineEditInput = {
   codeAfter: string;
 };
 
-const BLOCK_TAG = /<\s*(\/?)\s*(instruction|selection|context_before|context_after)\s*>/gi;
+// Covers the ⌘K blocks and the AI command bar blocks.
+const BLOCK_TAG = /<\s*(\/?)\s*(instruction|selection|context_before|context_after|document|scope|job|compile_log|history)\s*>/gi;
 
 /** Stops user text from opening or closing our blocks (prompt-injection guard). */
 export function neutralizeTags(text: string): string {

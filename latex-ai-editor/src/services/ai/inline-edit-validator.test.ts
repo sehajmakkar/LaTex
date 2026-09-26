@@ -86,3 +86,16 @@ describe("validateInlineEdit", () => {
     expect(check(String.raw`\resumeItem{` + "x".repeat(5000) + "}").ok).toBe(false);
   });
 });
+
+describe("layout numbers", () => {
+  it("allows new lengths but not new facts", () => {
+    const ok = validateInlineEdit({
+      output: String.raw`\vspace{-4pt}\setlength{\itemsep}{0.5em}\linespread{0.95}\includegraphics[width=0.8\textwidth]{}`,
+      selection: String.raw`\vspace{-2pt}\setlength{\itemsep}{1em}\linespread{1}\includegraphics[width=\textwidth]{}`,
+      instruction: "tighten spacing",
+    });
+    expect(ok.ok).toBe(true);
+    const bad = validateInlineEdit({ output: "Led a team of 12 in 3 cities", selection: "Led a team", instruction: "improve" });
+    expect(bad.ok).toBe(false);
+  });
+});

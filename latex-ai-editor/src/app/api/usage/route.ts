@@ -17,17 +17,18 @@ export async function GET() {
     const user = await userRepository.findByClerkId(userId);
     const limits = getPlanLimits(user?.plan);
     const { monthStart } = usagePeriod();
-    const [projects, aiEdits, atsAiReviews] = await Promise.all([
+    const [projects, aiEdits, atsAiReviews, aiCommands] = await Promise.all([
       userRepository.countProjectsByUserId(userId),
       userUsageRepository.sumAiEditsSince(userId, monthStart),
       userUsageRepository.sumAtsScansSince(userId, monthStart),
+      userUsageRepository.sumAiCommandsSince(userId, monthStart),
     ]);
     return NextResponse.json({
       data: {
         plan: limits.id,
         subscriptionStatus: user?.subscriptionStatus ?? null,
-        limits: { projects: limits.projects, aiEditsPerMonth: limits.aiEditsPerMonth, atsAiReviewsPerMonth: limits.atsAiReviewsPerMonth },
-        usage: { projects, aiEdits, atsAiReviews },
+        limits: { projects: limits.projects, aiEditsPerMonth: limits.aiEditsPerMonth, atsAiReviewsPerMonth: limits.atsAiReviewsPerMonth, aiCommandsPerMonth: limits.aiCommandsPerMonth },
+        usage: { projects, aiEdits, atsAiReviews, aiCommands },
       },
     });
   } catch (error) {

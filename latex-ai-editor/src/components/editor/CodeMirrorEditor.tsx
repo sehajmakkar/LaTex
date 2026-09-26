@@ -10,11 +10,29 @@ import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { lintKeymap } from "@codemirror/lint";
 import { latex } from "codemirror-lang-latex";
 import { aiExtension, showAiEditInput } from "@marimo-team/codemirror-ai";
+import { createAiReview, type ReviewOutcome } from "./ai-review";
 import { locateBullet } from "./locate-bullet";
 import { toast } from "sonner";
 
 /** A fix requested from the ATS report: select this bullet and pre-fill ⌘K. */
 export type FixRequest = { text: string; prompt: string };
+
+export type { ReviewOutcome };
+
+/** What the AI command bar needs from the editor. */
+export type EditorApi = {
+  getDoc: () => string;
+  /** The current selection, or null when nothing is selected. */
+  getSelection: () => { from: number; to: number } | null;
+  /** Shows `proposed` as an inline diff against the current text, with per-change Accept/Reject. */
+  startReview: (proposed: string) => boolean;
+  /** Keeps every remaining change and leaves review mode. */
+  acceptAll: () => void;
+  /** Reverts every remaining change and leaves review mode. */
+  rejectAll: () => void;
+  isReviewing: () => boolean;
+  focus: () => void;
+};
 
 type CodeMirrorEditorProps = {
   value: string;
@@ -22,6 +40,9 @@ type CodeMirrorEditorProps = {
   className?: string;
   fixRequest?: FixRequest | null;
   onFixHandled?: () => void;
+  onReady?: (api: EditorApi | null) => void;
+  /** Called once the last change of a review is resolved (or Accept/Reject all). */
+  onReviewEnd?: (outcome: ReviewOutcome, original: string) => void;
 };
 
 type AIEditErrorBody = {
@@ -79,9 +100,23 @@ async function handleAIPrompt({
 // Do NOT wrap in hsl() — that only works when the variable stores bare "H S% L%" channels.
 // For alpha variants, use color-mix(in oklch, var(--x) N%, transparent).
 
-export function CodeMirrorEditor({ value, onChange, className, fixRequest, onFixHandled }: CodeMirrorEditorProps) {
+export function CodeMirrorEditor({
+  value,
+  onChange,
+  className,
+  fixRequest,
+  onFixHandled,
+  onReady,
+  onReviewEnd,
+}: CodeMirrorEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const onReviewEndRef = useRef(onReviewEnd);
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReviewEndRef.current = onReviewEnd;
+    onReadyRef.current = onReady;
+  });
 
   const handleChange = useCallback(
     (update: { state: EditorState; docChanged: boolean }) => {
@@ -106,7 +141,8 @@ export function CodeMirrorEditor({ value, onChange, className, fixRequest, onFix
         overflow: "auto",
       },
       ".cm-content": {
-        padding: "16px 0",
+        // Room at the bottom so the AI command bar never hides the last lines.
+        padding: "16px 0 200px",
         caretColor: "var(--foreground)",
       },
       ".cm-line": {
@@ -307,6 +343,61 @@ export function CodeMirrorEditor({ value, onChange, className, fixRequest, onFix
       },
     });
 
+    // ── AI command bar review (unified diff) ─────────────────────────────────
+    const reviewTheme = EditorView.theme({
+      ".cm-changedLine, .cm-inlineChangedLine": {
+        backgroundColor: "oklch(0.55 0.15 145 / 0.10) !important",
+      },
+      ".cm-changedText": {
+        background: "oklch(0.55 0.15 145 / 0.22) !important",
+      },
+      ".cm-deletedChunk": {
+        backgroundColor: "oklch(0.6 0.2 27 / 0.08) !important",
+        paddingLeft: "16px",
+        position: "relative",
+      },
+      ".cm-deletedChunk .cm-deletedText, .cm-deletedChunk del": {
+        background: "oklch(0.6 0.2 27 / 0.18) !important",
+        textDecoration: "line-through",
+        textDecorationColor: "oklch(0.6 0.2 27 / 0.6)",
+      },
+      ".cm-deletedChunk .cm-chunkButtons": {
+        position: "absolute",
+        insetInlineEnd: "10px",
+        top: "2px",
+        display: "flex",
+        gap: "4px",
+        zIndex: "1",
+      },
+      ".cm-review-accept, .cm-review-reject": {
+        padding: "1px 8px",
+        borderRadius: "5px",
+        fontSize: "11px",
+        fontWeight: "500",
+        fontFamily: "var(--font-sans), system-ui, sans-serif",
+        cursor: "pointer",
+      },
+      ".cm-review-accept": {
+        border: "none",
+        backgroundColor: "var(--primary)",
+        color: "var(--primary-foreground)",
+      },
+      ".cm-review-reject": {
+        border: "1px solid var(--border)",
+        backgroundColor: "var(--background)",
+        color: "var(--foreground)",
+      },
+      ".cm-changedLineGutter": { background: "oklch(0.6 0.15 145) !important" },
+      ".cm-deletedLineGutter": { background: "oklch(0.6 0.2 27) !important" },
+      ".cm-collapsedLines": {
+        color: "var(--muted-foreground) !important",
+        background: "var(--muted) !important",
+        fontSize: "12px",
+      },
+    });
+
+    const review = createAiReview((outcome, original) => onReviewEndRef.current?.(outcome, original));
+
     const state = EditorState.create({
       doc: value,
       extensions: [
@@ -324,6 +415,8 @@ export function CodeMirrorEditor({ value, onChange, className, fixRequest, onFix
         latex(),
         editorTheme,
         aiTheme,
+        reviewTheme,
+        review.extension,
         aiExtension({
           prompt: (opts) => handleAIPrompt(opts),
           onAcceptEdit: () => {
@@ -366,7 +459,23 @@ export function CodeMirrorEditor({ value, onChange, className, fixRequest, onFix
 
     viewRef.current = view;
 
+    const api: EditorApi = {
+      getDoc: () => view.state.doc.toString(),
+      getSelection: () => {
+        const { from, to } = view.state.selection.main;
+        return from === to ? null : { from, to };
+      },
+      startReview: (proposed) => review.start(view, proposed),
+      acceptAll: () => review.keepAll(view),
+      rejectAll: () => review.undoAll(view),
+      isReviewing: () => review.isReviewing(),
+      focus: () => view.focus(),
+    };
+    onReadyRef.current?.(api);
+
     return () => {
+      onReadyRef.current?.(null);
+      review.reset();
       view.destroy();
       viewRef.current = null;
     };

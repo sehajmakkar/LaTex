@@ -12,7 +12,7 @@ const plans = [
     features: [
       `${pricing.free.resumes} resumes, every template`,
       "LaTeX editor with live PDF preview",
-      `${pricing.free.aiEditsPerMonth} AI edits a month`,
+      `${pricing.free.aiEditsPerMonth} AI edits and ${pricing.free.aiCommandsPerMonth} AI commands a month`,
       "ATS check",
       "PDF download",
     ],
@@ -27,9 +27,9 @@ const plans = [
     period: "/month",
     features: [
       "Unlimited resumes",
-      `${pricing.pro.aiEditsPerMonth.toLocaleString("en-US")} AI edits a month`,
+      `${pricing.pro.aiEditsPerMonth.toLocaleString("en-US")} AI edits and ${pricing.pro.aiCommandsPerMonth} AI commands a month`,
       "Everything in Free",
-      "New AI features first: command bar, job tailoring",
+      "Longer version history, new AI features first",
       "Cancel anytime",
     ],
     cta: "Upgrade to Pro",

@@ -22,8 +22,10 @@ const ROWS: Row[] = [
   { label: "Inline AI edits (⌘K)", free: `${PLANS.free.aiEditsPerMonth} / month`, pro: `${PLANS.pro.aiEditsPerMonth.toLocaleString()} / month` },
   { label: "ATS check", free: true, pro: true },
   { label: "PDF download", free: true, pro: true },
-  { label: "AI command bar (coming soon)", free: "Limited", pro: true },
-  { label: "Tailor to a job, cover letters (coming soon)", free: false, pro: true },
+  { label: "AI command bar (chat edits with a diff)", free: `${PLANS.free.aiCommandsPerMonth} / month`, pro: `${PLANS.pro.aiCommandsPerMonth} / month` },
+  { label: "Version history", free: `Last ${PLANS.free.versionsKept}`, pro: `Last ${PLANS.pro.versionsKept}` },
+  { label: "Tailor to a job description", free: true, pro: true },
+  { label: "Cover letters (coming soon)", free: false, pro: true },
 ];
 
 const FAQ = [
@@ -87,7 +89,7 @@ export default function BillingPage() {
           </p>
           <ul className="mt-6 flex-1 space-y-2.5 text-sm">
             <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.free.projects} resumes, every template</li>
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.free.aiEditsPerMonth} AI edits a month</li>
+            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.free.aiEditsPerMonth} AI edits and {PLANS.free.aiCommandsPerMonth} AI commands a month</li>
             <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />ATS check and PDF download</li>
           </ul>
           <Button variant="outline" className="mt-6" asChild={!isPro} disabled={isPro}>
@@ -114,8 +116,8 @@ export default function BillingPage() {
           </p>
           <ul className="mt-6 flex-1 space-y-2.5 text-sm">
             <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />Unlimited resumes</li>
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.pro.aiEditsPerMonth.toLocaleString()} AI edits a month</li>
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />New AI features first: command bar, job tailoring</li>
+            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.pro.aiEditsPerMonth.toLocaleString()} AI edits and {PLANS.pro.aiCommandsPerMonth} AI commands a month</li>
+            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />Longer version history, new AI features first</li>
           </ul>
           {isLoading ? (
             <Skeleton className="mt-6 h-9 rounded-full" />
