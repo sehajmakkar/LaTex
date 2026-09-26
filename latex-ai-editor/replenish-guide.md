@@ -537,3 +537,65 @@ Restart `npm run dev` (new dependency `@codemirror/merge` is already in `package
 | 16 | | |
 | 17 | | |
 | 18 | | |
+
+---
+
+## Step: Phase 5b, import an existing resume (27 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| LaTeX import | `.tex` or **Overleaf .zip** imported as-is: main file found, `\input` files inlined, custom `.cls/.sty/.bib` embedded (`filecontents*`), missing images become empty boxes, engine auto-detected and pinned if the first one fails. No AI, free | `src/services/import/latex-import.ts`, `engine-probe.ts` |
+| AI import | **PDF / DOCX / TXT / Markdown / pasted text** → Gemini reads it into structured JSON (verbatim rules, PDF attached for layout) → rendered by code into the Jake's Resume layout (always compiles) | `ai-import.ts`, `resume-data.ts`, `render.ts` |
+| Checking | Every string in the result must be in the file; every line of the file must be in the result; one retry with the problems; the rest is reported | `verify.ts` |
+| API | `POST /api/import` (multipart `file` or `text`): creates the project, compiles it, returns the report + PDF | `src/app/api/import/route.ts` |
+| UI | `/import`: upload or paste → progress → **review: report + original + compiled result side by side** → Open in editor. Dashboard: "Import your existing resume" + **Import** button; `?intent=import` | `src/app/(app)/import/page.tsx`, dashboard, intents |
+| Limits | AI imports Free 5 / Pro 50 a month (`user_usage.ai_imports`, **already applied to Neon**); LaTeX imports unlimited; resume limit checked before AI | `plans.ts`, `drizzle/manual/2026-09-27-resume-import.sql` |
+| Marketing | FAQ "Can I bring my resume from Overleaf, Word or a PDF?", `appLinks.import` | `marketing/components/sections/faq-section.tsx`, `marketing/lib/site.ts` |
+| All AI routes | Gemini SDK retries capped (2 attempts, ≤2 s backoff instead of 5 attempts / up to 60 s) so no route overruns 60 s | `src/lib/gemini.ts` |
+
+### What I already verified
+- **Unit tests 79/79** (11 new: escaping, rendering, verification incl. two-column extraction, zip/tex import).
+- **Eval** (`npx tsx --env-file=.env --tsconfig tsconfig.json scripts/eval-import.ts [files…]`): 8 PDFs/DOCX through AI: all compile, 7/8 at ≥97.5% coverage with nothing unverified. Real Overleaf projects: Jake's .tex and AltaCV (custom class, .bib, photo) compile; Awesome-CV doesn't (needs TeX Live 2024+, logged).
+- Rendered a two-column PDF import to an image and compared: correct Jake's layout (organisation + dates right-aligned, role + location), all sections, skills grouped.
+- **End-to-end API 16/16** (dev server, temporary user, deleted afterwards): zip, tex, two-column PDF, DOCX, paste; 3-resume limit returns 403 before any AI; bad files 415/422; usage counts only AI imports; AI limit 429 with upgrade while LaTeX imports still work.
+- `tsc`, ESLint (0 errors), `npm run build`.
+
+### Setup
+Restart `npm run dev` (`jszip` was added to `package.json`; run `npm install` if the import fails). No new env vars; the DB column is already added.
+
+To get an Overleaf project: open it on overleaf.com → **Menu → Download → Source** (a .zip).
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | Dashboard with 0 resumes | "Import your existing resume" option; with resumes, an **Import** button in the header |
+| 2 | `/import` → upload your **Overleaf .zip** | "Importing your LaTeX project…", then review: "Imported main.tex as-is… It compiles with …"; the PDF looks like it does on Overleaf |
+| 3 | Same with a single **.tex** | Same; if it uses `\input` files you didn't upload, a warning tells you to upload the .zip |
+| 4 | Upload your resume **PDF** | 10–30 s, then review: coverage %, your PDF on the left, the rebuilt one on the right, same wording |
+| 5 | Any "Check these" or "Lines not in the new resume" | Lists with copy buttons; flagged lines also appear as `% CHECK THESE` at the top of the LaTeX |
+| 6 | Upload a **Word (.docx)** resume | Same as 4, with the Word preview on the left |
+| 7 | **Paste text** tab → paste a resume (e.g. from LinkedIn or Google Docs) | Rebuilt resume; the pasted text on the left |
+| 8 | **Open in editor** | The project opens and compiles |
+| 9 | A two-column PDF | Warning "It's now one column…"; everything is there |
+| 10 | A resume with a photo (LaTeX) | Empty box where the photo was + warning |
+| 11 | At 3 resumes on Free | Banner on `/import`; Import button disabled |
+| 12 | Upload a .png or a renamed file | Clear error toast |
+| 13 | Signed out: `/sign-up?intent=import` | After sign-up, lands on `/import` |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |
+| 8 | | |
+| 9 | | |
+| 10 | | |
+| 11 | | |
+| 12 | | |
+| 13 | | |

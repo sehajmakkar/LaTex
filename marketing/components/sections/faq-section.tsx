@@ -10,6 +10,10 @@ export const faqs = [
     a: "No. Start from a template and edit the text you see, or select a line and press ⌘K to describe the change in plain English. If you do know LaTeX, the full source is yours to edit.",
   },
   {
+    q: "Can I bring my resume from Overleaf, Word or a PDF?",
+    a: "Yes. Upload your Overleaf project (.zip or .tex) and it keeps its exact design, free. Upload a PDF or Word file and Vero rebuilds it in LaTeX with your wording kept word for word, then shows you both side by side with anything it couldn't place.",
+  },
+  {
     q: "Is the ATS check really free?",
     a: "Yes, on every plan. Upload a PDF or DOCX, or check a resume you wrote in Vero, and paste a job description to see which keywords you cover.",
   },

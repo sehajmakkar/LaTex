@@ -16,6 +16,7 @@ import {
   Plus,
   ScanSearch,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -227,6 +228,12 @@ function ResumesPage() {
           projects && projects.length > 0 ? (
             <>
               <Button variant="outline" asChild>
+                <Link href="/import">
+                  <Upload className="h-4 w-4" />
+                  Import
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
                 <Link href="/templates">
                   <LayoutTemplate className="h-4 w-4" />
                   From a template
@@ -258,6 +265,12 @@ function ResumesPage() {
               icon={<LayoutTemplate className="h-5 w-5" />}
               title="Start from a template"
               description="Pick a proven resume layout and fill in your details."
+            />
+            <OnboardingChoice
+              href="/import"
+              icon={<Upload className="h-5 w-5" />}
+              title="Import your existing resume"
+              description="From Overleaf (.zip or .tex), PDF or Word. LaTeX keeps its exact design; PDFs and Word files are rebuilt in LaTeX."
             />
             <OnboardingChoice
               onClick={handleNew}

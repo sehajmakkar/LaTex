@@ -28,6 +28,8 @@ export const appLinks = {
   start: `${APP_URL}/sign-up?intent=start`,
   signIn: `${APP_URL}/sign-in`,
   ats: `${APP_URL}/sign-up?intent=ats`,
+  /** Import an existing resume (Overleaf .zip/.tex, PDF, Word). */
+  import: `${APP_URL}/sign-up?intent=import`,
   pro: `${APP_URL}/sign-up?intent=pro`,
   templates: `${APP_URL}/templates`,
 }

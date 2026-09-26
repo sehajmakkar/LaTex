@@ -13,6 +13,9 @@
     },
     "src/app/api/ai/command/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/import/route.ts": {
+      "maxDuration": 60
     }
   },
   "ignoreCommand": "git diff HEAD^ HEAD --quiet -- . ':(exclude)latex-service'"

@@ -10,7 +10,13 @@ import { env } from "@/lib/env";
 let client: GoogleGenAI | null = null;
 
 export function getGemini(): GoogleGenAI {
-  client ??= new GoogleGenAI({ apiKey: env.GEMINI_API_KEY ?? "" });
+  client ??= new GoogleGenAI({
+    apiKey: env.GEMINI_API_KEY ?? "",
+    // The SDK's default is 5 attempts with up to 60 s backoff on 429/5xx, which can
+    // outlast a route's time budget (Vercel stops functions at 60 s). One quick
+    // retry covers transient errors; our services do their own retries.
+    httpOptions: { retryOptions: { attempts: 2, initialDelay: 1, maxDelay: 2 } },
+  });
   return client;
 }
 

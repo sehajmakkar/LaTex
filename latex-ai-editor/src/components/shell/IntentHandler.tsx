@@ -27,6 +27,8 @@ export function IntentHandler() {
 
     if (intent.kind === "ats") {
       router.push("/ats");
+    } else if (intent.kind === "import") {
+      router.push("/import");
     } else if (intent.kind === "pro") {
       toast.promise(startProCheckout(), { loading: "Opening checkout…", error: (e: Error) => e.message });
     } else if (intent.kind === "template") {

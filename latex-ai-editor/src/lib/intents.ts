@@ -8,12 +8,13 @@ export type Intent =
   | { kind: "start" }
   | { kind: "ats" }
   | { kind: "pro" }
+  | { kind: "import" }
   | { kind: "template"; templateId: string };
 
 export function parseIntent(raw: string | null | undefined): Intent | null {
   if (!raw) return null;
   const value = raw.trim().toLowerCase();
-  if (value === "start" || value === "ats" || value === "pro") return { kind: value };
+  if (value === "start" || value === "ats" || value === "pro" || value === "import") return { kind: value };
   const template = /^template:([a-z0-9-]{1,64})$/.exec(value);
   if (template) return { kind: "template", templateId: template[1] };
   return null;

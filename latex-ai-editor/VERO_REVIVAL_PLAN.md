@@ -498,7 +498,7 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 - [ ] **(Medium, you)** Browser check of the new report page and **Fix in editor**: the ⌘K pre-fill relies on the editor extension's DOM, so check it once.
 - [ ] **(Medium)** The job-match % varies between runs for the same resume and JD (78% vs 65% seen), because the AI's requirement list differs. Rule-based scores are deterministic. Options: cache the JD requirements per JD hash, or use temperature 0 for extraction.
 - [ ] **(Medium)** Parser heuristics: for some templates the title and company come out merged or swapped (e.g. "Software Engineer Company Name"); location isn't found when written without a comma. Improve with more sample resumes (collect anonymised real PDFs).
-- [ ] **(Medium, Phase 7)** Uploaded resumes can't use one-click fixes. "Import into Vero" (PDF/DOCX → template) would unlock them, and it's the P1 importer.
+- [ ] **(Medium, Phase 7)** Uploaded resumes can't use one-click fixes. "Import into Vero" (PDF/DOCX → template) would unlock them, and it's the P1 importer. *The importer now exists (Phase 5b); what's left is an "Import into Vero" button on uploaded ATS reports that reuses the stored file.*
 - [ ] **(Low)** The per-minute scan limit is in memory (same as ⌘K); move it to Upstash later.
 - [ ] **(Low)** Old v1 reports can't be shown in the new layout (they show "run a new check"). Delete them in a later migration.
 - [ ] **(Low)** Marketing: the ATS CTAs can stay on `/sign-up?intent=ats` (sign-in is required by design now).
@@ -546,6 +546,40 @@ Users then have three ways to edit: **(1) code by hand, (2) inline ⌘K on a sel
 
 
 
+### Phase 5b: Import an existing resume (onboarding) ✅
+
+*Implemented 27 Sep 2026. Unit tests 11 new (79 total), eval 11/12 real documents (the miss is a compile-image limit), end-to-end API 16/16. Steps are in `replenish-guide.md`.*
+
+**Why:** almost everyone arrives with a resume already, most often an Overleaf project or a PDF/Word file. Research: Overleaf imports Word/Markdown with **Pandoc** (structure only, no styling, "a starting point") and projects as a **.zip**. Resume builders (Rezi, Teal, JSON Resume tools) parse into **structured JSON with an LLM, then render their own template**. Gemini reads PDFs natively (≈258 tokens/page, native text free), which handles columns better than text extraction alone.
+
+**What we built** (`/import`, `POST /api/import`, `src/services/import/*`)
+
+- [x] **Two paths, chosen by file type:**
+  - **LaTeX (.tex or Overleaf .zip) → imported as-is, no AI, free and unlimited.** The main file is found (`\documentclass` + `\begin{document}`, preferring main/resume/cv.tex); `\input`/`\include` files are inlined; custom `.cls/.sty/.bib/.cfg/.bst` files are embedded with `filecontents*` (verified on Railway: our compile service takes one main.tex, and TeX writes these next to it); folder paths are flattened. Missing images become **empty placeholder boxes** (so class macros like AltaCV's `\photo` still compile). The import **compiles with the detected engine and, if that fails, tries the others and pins the working one** with `% !TEX program` (Overleaf keeps the compiler in project settings, not the source).
+  - **PDF / DOCX / TXT / Markdown / pasted text → AI reads it into structured JSON** (`gemini-3.6-flash`, JSON schema, **verbatim transcription rules**, PDF attached so the model sees the layout), then **our code renders it into the Jake's Resume layout** (our default and the most-used resume on Overleaf). The AI never writes LaTeX, and all text is escaped, so the result always compiles.
+- [x] **Every AI import is checked against the file, both ways** (`verify.ts`): (1) every string must exist in the file (runs of words, robust to missing spaces, hyphenation and column interleaving; any new number fails); (2) every line of the file must be in the result. Problems go back to the model once; what's left is reported: "Check these" (possibly invented, also listed at the top of the LaTeX) and "Lines not in the new resume" (with copy buttons).
+- [x] **Review screen:** report (coverage %, flags, warnings) + **your original** (PDF/DOCX/text preview) **side by side with the compiled result** → Open in editor.
+- [x] Entry points: dashboard onboarding ("Import your existing resume") and an **Import** button; `?intent=import` (marketing `appLinks.import`); marketing FAQ entry.
+- [x] Limits: AI imports Free **5/month**, Pro **50/month** (`user_usage.ai_imports`, `drizzle/manual/2026-09-27-resume-import.sql`, applied); LaTeX imports free; the 3-resume limit is checked **before** any AI call; 3/min burst. Cost ≈ 1.5–11k input / 0.4–6k output tokens, **~$0.01–0.05** per import at 2027 prices.
+- [x] Gemini client: SDK retries capped at 2 attempts with ≤2 s backoff (was 5 attempts, up to 60 s), so no AI route can overrun Vercel's 60 s limit. This applies to ⌘K, the command bar and ATS too.
+
+**Eval** (`scripts/eval-import.ts`): 6 templates compiled to PDF + a two-column PDF + a DOCX through the AI path: **8/8 compile, 7/8 at ≥97.5% coverage with nothing unverified** (the eighth flags one genuine table cell as "check this"), 2–25 s each. LaTeX path: Jake's .tex, AltaCV (two examples, custom class + .bib + photo) compile; **Awesome-CV fails** (see below).
+
+**Follow-ups found while testing** (by priority):
+- [ ] **(Medium, 1.1)** The compile image is **TeX Live 2023**: the current Awesome-CV needs `fontawesome6` (TL 2024+), and new templates will keep needing newer packages. Upgrade the image to TL 2025 if it still fits Railway Free's 4 GB (check "full minus docs" size), or move to a paid plan.
+- [ ] **(Medium, 1.1)** `pdfx` under **XeLaTeX** fails on our service ("CreationDate is not properly supported"); it works on Overleaf. The engine probe works around it when pdfLaTeX also works. Check the sandbox's `SOURCE_DATE_EPOCH`/date settings.
+- [ ] **(Medium, Phase 7)** **Images** (photos, logos) can't be imported: the compile service takes one text file. Needs multi-file compiles (assets stored in R2 per project and sent with each compile) plus an upload UI in the editor.
+- [ ] **(Low)** AI imports always use the Jake's layout. Add renderers for 2–3 more templates (or let the user pick), or restyle via the command bar.
+- [ ] **(Low)** Table-shaped content (e.g. education tables) loses its column headers ("%/CGPA", "Year"); they show under "Lines not in the new resume".
+- [ ] **(Low)** Zips with several main files: the picker prefers main/resume/cv.tex, then the shallowest/largest. In the AltaCV repo it picked `mmayer.tex` over `sample.tex`. Add a chooser when there's more than one candidate.
+- [ ] **(Low)** Non-Latin scripts (CJK, Devanagari, Cyrillic) are dropped by the pdfLaTeX renderer (reported as "symbols left out"). Needs an XeLaTeX + fontspec variant.
+- [ ] **(Low)** "Import into Vero" button on uploaded ATS reports (reuse the stored file); marketing hero CTA "Import from Overleaf" (`appLinks.import` exists).
+- [ ] **(Low)** Browser check of the import page and review screen still needed (see guide).
+
+---
+
+
+
 ### Phase 6: Production launch (≈3–4 days)
 
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).
@@ -570,7 +604,7 @@ Based on Overleaf, Rezi, Teal, Jobscan, Enhancv, FlowCV, and Kickresume:
 
 | Priority | Feature                                                                                                                                                 | Why it matters                                                                                                     |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| P1       | **Import an existing resume → LaTeX template** (PDF/DOCX → structured JSON via Gemini → fill a chosen template)                                         | The best onboarding hook: most people arrive with a resume already. The ATS upload pipeline already extracts text. |
+| P1       | ~~**Import an existing resume → LaTeX template**~~ ✅ Done in Phase 5b (Overleaf .zip/.tex as-is; PDF/DOCX/text → structured JSON → Jake's layout)   | The best onboarding hook: most people arrive with a resume already. The ATS upload pipeline already extracts text. |
 | P1       | **Tailor to a job**: paste a JD → creates a tailored copy of the resume, runs the command bar with a tailoring prompt, and shows the match-score change | The core loop for job seekers. Jobscan and Teal charge for this.                                                   |
 | P1       | **Version history and duplicate project**                                                                                                               | Needed before people trust AI edits. Tables from Phase 5.                                                          |
 | P2       | **Cover letter generator** (resume + JD → LaTeX letter in a matching style)                                                                             | Cheap to build on top of the same stack                                                                            |

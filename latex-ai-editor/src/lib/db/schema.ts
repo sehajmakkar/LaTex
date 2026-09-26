@@ -46,6 +46,7 @@ export const userUsage = pgTable("user_usage", {
   aiEdits: integer("ai_edits").notNull().default(0),
   atsScans: integer("ats_scans").notNull().default(0),
   aiCommands: integer("ai_commands").notNull().default(0),
+  aiImports: integer("ai_imports").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
