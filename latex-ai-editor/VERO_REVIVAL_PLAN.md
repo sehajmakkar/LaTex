@@ -94,7 +94,7 @@ Nothing is blocking. Optional: rotate `LATEX_API_SECRET` to a long random value 
 | 5   | **Clerk production instance** and your own **Google OAuth client** (Google Cloud Console → Credentials)                     | Dev keys (`pk_test_…`) show a "development" banner and have user caps.                                                   |
 | 6   | **Dodo live mode**: business verification, live API key, live products, webhook at `https://app.<domain>/api/webhooks/dodo` | Needed to take real payments. Dodo reviews your site, so you'll need Terms, Privacy, and Refund pages (I'll draft them). |
 | 7   | **Vercel plan**: Hobby is non-commercial only, so a paid product needs **Pro**                                              | Terms of service                                                                                                         |
-| 8   | **Access to the landing-page repo** (or change its CTAs yourself)                                                           | CTAs must point to the app (§Phase 3.3).                                                                                 |
+| 8   | ~~Access to the landing-page repo~~ ✅ Imported into `marketing/` (Phase 3.4)                                              | CTAs must point to the app (§Phase 3.3).                                                                                 |
 | 9   | **Vero logo / brand assets**, or approval for me to make a simple wordmark                                                  | Rebrand                                                                                                                  |
 | 10  | Neon: are the current 8 users real, or test data?                                                                           | Decides whether we wipe or migrate, and whether we create a separate `prod` branch                                       |
 
@@ -394,6 +394,29 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 - [ ] **(Low)** Docs (`README.md`, `ARCHITECTURE.md`, `GUIDE.md`, deployment docs) still say TeXel and describe the old structure.
 - [ ] **(Low)** Resume cards show a generic page illustration. Real thumbnails need a stored render of each resume's first page (after the PDF storage work).
 - [ ] **(Low, Phase 5)** The editor autosaves once right after opening (content load triggers the debounce). Harmless, but a wasted write.
+
+### Phase 3.4: Marketing site in this repo, then its rework (≈3–4 days)
+
+**Setup ✅ (26 Sep 2026)**
+- [x] Imported `TeXel-Landing` into `marketing/` **with its history** (`git subtree`, local commit `40f86d4`; its 7 commits are `HEAD^2`). It builds from the new location.
+- [x] `marketing/vercel.json` and `latex-ai-editor/vercel.json` now have `ignoreCommand`, so each Vercel project only builds when its own folder changes (the app also ignores `latex-service/`). `railway.toml` has `watchPatterns`, so Railway only rebuilds the compile image when `latex-service/` changes. Marketing dev runs on **port 3001**.
+- [ ] **You:** push; reconnect the marketing Vercel project to `sehajmakkar/LaTex` with Root Directory `marketing`; set the app project's Root Directory to `latex-ai-editor` if it isn't already; archive the `TeXel-Landing` GitHub repo once the new deploy works (steps in the guide).
+
+**Decisions (from you):** keep every section. Testimonials stay and get **real quotes from friends**. The company logos stay because they build conviction (people build resumes to get into these companies), but their **wording** changes. Adding sections and marketing/SEO content is welcome. Look at Awwwards again when this phase starts.
+
+**Rework (to do)**
+- [ ] **(High)** Rebrand TeXel → Vero everywhere (navbar, footer, metadata, copy); swap in the Vero mark/icons once brand assets exist.
+- [ ] **(High)** CTAs → the app with intents, base URL from `NEXT_PUBLIC_APP_URL` (now `https://hirex-omega.vercel.app`; later `https://app.tryvero.app`): Get started → `/sign-up?intent=start`, Log in → `/sign-in`, Free ATS → `/sign-up?intent=ats`, Go Pro → `/sign-up?intent=pro`, template tiles → `intent=template:<id>`.
+- [ ] **(High)** Pricing: Free $0 / **Pro $5.99** with the real limits from `plans.ts`; keep Teams as "Contact us" or drop it (your call).
+- [ ] **(High, before launch)** Testimonials: replace the placeholder quotes with your friends' real ones (name, role, optional photo, with their permission). Until then, show them only in development, or ship the real ones first; invented quotes must not go live.
+- [ ] **(High, before launch)** Unverifiable claims: "Join thousands of job seekers…" and "placement rate is up 30%" → honest copy until there are real numbers.
+- [ ] **(Medium)** Company logos: reword the framing from integration/partner ("integrationLogos" under the ATS card) to aspiration, e.g. *"Build a resume ready for roles at companies like…"*, and add a small line in the footer: *"Company names and logos are trademarks of their owners. Vero is not affiliated with them."*
+- [ ] **(Medium)** Build hygiene: remove `typescript.ignoreBuildErrors`, move to React 19 (Next 16 expects it), prune ~30 unused shadcn components.
+- [ ] **(Medium)** SEO and marketing content: title/description per section, `sitemap.xml`, `robots.txt`, OG/Twitter image, JSON-LD (SoftwareApplication + FAQ), an FAQ section, a "How it works" section, a template gallery linked to the app, a "Free ATS checker" section as an SEO entry point; drop the `generator: v0.app` metadata.
+- [ ] **(Medium)** Design pass using Awwwards references (the `awwwards-mcp` Docker setup from Phase 3), keeping the shared design language with the dashboard.
+- [ ] **(Low)** Shared brand bits (logo, name, pricing numbers) in one place both apps read, if duplication starts to hurt.
+
+---
 
 ### Phase 4: Rebuild ATS as a free tool (≈4–5 days)
 

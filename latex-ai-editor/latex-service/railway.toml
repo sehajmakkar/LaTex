@@ -1,6 +1,9 @@
 [build]
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"
+# Only rebuild the (large) TeX Live image when the service itself changes.
+# Railway evaluates watch patterns from the repository root.
+watchPatterns = ["/latex-ai-editor/latex-service/**"]
 
 [deploy]
 healthcheckPath = "/health"

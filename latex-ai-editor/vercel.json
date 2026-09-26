@@ -1,4 +1,5 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "functions": {
     "src/app/api/compile/route.ts": {
@@ -7,5 +8,6 @@
     "src/app/api/ai/edit/route.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- . ':(exclude)latex-service'"
 }

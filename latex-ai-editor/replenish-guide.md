@@ -307,3 +307,42 @@ Signed-in users following any of these skip sign-up and land straight on the act
 | 14 | | |
 | 15 | | |
 | 16 | | |
+
+---
+
+## Step: Phase 3.4 setup, marketing site moved into this repo (26 Sep 2026)
+
+### What changed
+| Change | Where |
+|---|---|
+| `TeXel-Landing` imported **with history** into `marketing/` (local commit `40f86d4`, not pushed) | `marketing/` |
+| Each Vercel project only builds when its own folder changes (`ignoreCommand`) | `marketing/vercel.json`, `latex-ai-editor/vercel.json` |
+| Railway only rebuilds the compile image when `latex-service/` changes (`watchPatterns`) | `latex-ai-editor/latex-service/railway.toml` |
+| Marketing dev server on port 3001 | `marketing/package.json` |
+
+### Verified
+- `marketing/` installs and builds (`npm ci && npm run build`); the page prerenders.
+- The ignore commands behave correctly on the import commit: **app skips** (exit 0), **marketing builds** (exit 1).
+
+### Steps for you
+1. Commit the small config changes (the three files above) and **push `main`**.
+2. **Vercel, marketing project** (the one serving `texels.vercel.app`):
+   Settings → Git → **Disconnect** `TeXel-Landing` → **Connect** `sehajmakkar/LaTex` → Settings → Build & Deployment → **Root Directory = `marketing`** → Save → Deployments → **Redeploy**.
+3. **Vercel, app project** (`hirex-omega.vercel.app`): check that Root Directory = `latex-ai-editor`. The new `ignoreCommand` comes from `vercel.json` automatically; if a "Ignored Build Step" is already set in the dashboard, clear it so the file's version applies.
+4. **Railway:** after the push, check the service's Settings → **Watch Paths** shows `/latex-ai-editor/latex-service/**` (from `railway.toml`). If Railway kept an older dashboard value, set it there to the same.
+5. When `texels.vercel.app` deploys fine from the new repo: GitHub → `TeXel-Landing` → Settings → **Archive this repository**.
+
+Local development from now on:
+```bash
+cd latex-ai-editor && npm run dev   # app        → http://localhost:3000
+cd marketing && npm run dev         # marketing  → http://localhost:3001
+```
+
+### Results (fill in)
+| Check | Result | Notes |
+|---|---|---|
+| Push OK | | |
+| Marketing deploys from `LaTex` repo, root `marketing` | | |
+| App still deploys (and skips when only `marketing/` changes) | | |
+| Railway doesn't rebuild on a marketing-only push | | |
+| Old repo archived | | |
