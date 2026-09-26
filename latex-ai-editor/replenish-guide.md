@@ -346,3 +346,56 @@ cd marketing && npm run dev         # marketing  → http://localhost:3001
 | App still deploys (and skips when only `marketing/` changes) | | |
 | Railway doesn't rebuild on a marketing-only push | | |
 | Old repo archived | | |
+
+---
+
+## Step: Phase 3.4 round 1, marketing site rebrand, links, pricing, FAQ, SEO (26 Sep 2026)
+
+### What changed (`marketing/`, design unchanged, no dependency changes)
+| Area | Change | Files |
+|---|---|---|
+| Brand | TeXel → **Vero** everywhere; Vero favicon + Apple icon (the old ones were broken base64 text files) | `components/**`, `app/icon.svg`, `app/apple-icon.tsx` |
+| Links | All buttons go to the dashboard, login first then the right page (start / ATS / Pro checkout); Log in in the navbar | `lib/site.ts`, navbar, hero, features, CTA, footer |
+| Pricing | Free $0 · Pro $5.99, the same features as the dashboard billing page | `components/sections/pricing-section.tsx` |
+| New sections | Free ATS check CTA, FAQ (with structured data) | `components/sections/ats-cta-section.tsx`, `faq-section.tsx`, `app/page.tsx` |
+| SEO | Title, description, keywords, canonical, social previews; author **Sehaj**; v0 generator removed; app + FAQ structured data; `robots.txt`; `sitemap.xml`; share image | `app/layout.tsx`, `app/robots.ts`, `app/sitemap.ts`, `app/opengraph-image.tsx` |
+
+**The SEO files, briefly:**
+- `robots.txt` tells search engines they may index the site and where the sitemap is; Vercel preview links are kept out of Google.
+- `sitemap.xml` lists the pages to crawl.
+- The share image is what WhatsApp, LinkedIn or X show when someone posts your link.
+- Structured data lets Google show Vero's price and FAQ answers directly in results.
+
+Optional env vars (`marketing/.env.example`): `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CONTACT_EMAIL`.
+
+### What I already verified
+- `npm run build` passes (7 routes incl. `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/icon.svg`, `/apple-icon`).
+- In a browser (production build): every button's destination checked; page title, author "Sehaj", canonical, share image and 2 structured-data blocks present; no console errors apart from the Vercel Analytics script (expected locally).
+
+### Test checklist
+| # | Check | Expected |
+|---|---|---|
+| 1 | Open http://localhost:3001 | "Vero" in the navbar, footer and tab title; Vero icon in the tab |
+| 2 | **Get Started** / **Start Writing Free** | Dashboard sign-up → after login, Resumes |
+| 3 | **Check My Resume Free** (ATS section) / **Check your resume free** (features) | Sign-up → after login, the ATS page |
+| 4 | **Upgrade to Pro** | Sign-up → after login, Dodo checkout |
+| 5 | **Log in** | Dashboard sign-in |
+| 6 | Pricing | Free $0 · Pro $5.99/month, same features as the dashboard |
+| 7 | FAQ | Opens and closes; FAQ link in the navbar scrolls there |
+| 8 | After deploy: http://…/robots.txt and /sitemap.xml | Both load |
+| 9 | After deploy: paste the site link in WhatsApp/LinkedIn | Vero preview image shows |
+| 10 | After deploy: https://search.google.com/test/rich-results with your URL | Detects "FAQ" and "Software App" |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |
+| 8 | | |
+| 9 | | |
+| 10 | | |

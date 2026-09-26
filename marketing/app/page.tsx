@@ -5,6 +5,8 @@ import { FeaturesSection } from "@/components/sections/features-section"
 import { TestimonialsSection } from "@/components/sections/testimonials-section"
 import { PricingSection } from "@/components/sections/pricing-section"
 import { CtaSection } from "@/components/sections/cta-section"
+import { AtsCtaSection } from "@/components/sections/ats-cta-section"
+import { FaqSection } from "@/components/sections/faq-section"
 import { FooterSection } from "@/components/sections/footer-section"
 import LightRaysWrapper from "@/components/ui/LightRaysWrapper"
 
@@ -19,8 +21,10 @@ export default function Home() {
       <HeroSection />
       {/* <ImpactSection /> */}
       <FeaturesSection />
+      <AtsCtaSection />
       <TestimonialsSection />
       <PricingSection />
+      <FaqSection />
       <CtaSection />
       <FooterSection />
     </main>

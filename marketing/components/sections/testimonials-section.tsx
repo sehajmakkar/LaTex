@@ -5,14 +5,14 @@ import { TestimonialsColumn } from "@/components/ui/testimonials-column";
 
 const testimonials = [
   {
-    text: "TeXel completely changed how I write resumes. The inline AI rewrote my bullet points and I started getting callbacks within a week.",
+    text: "Vero completely changed how I write resumes. The inline AI rewrote my bullet points and I started getting callbacks within a week.",
     image:
       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
     name: "Sarah Chen",
     role: "Software Engineer",
   },
   {
-    text: "As a researcher, I need LaTeX daily. TeXel gives me a beautiful editor with live preview and AI suggestions — no more Overleaf struggles.",
+    text: "As a researcher, I need LaTeX daily. Vero gives me a beautiful editor with live preview and AI suggestions — no more Overleaf struggles.",
     image:
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
     name: "Marcus Johnson",
@@ -40,7 +40,7 @@ const testimonials = [
     role: "Data Scientist",
   },
   {
-    text: "We rolled out TeXel across our career center. Students love the templates and ATS feedback — our placement rate is up 30%.",
+    text: "We rolled out Vero across our career center. Students love the templates and ATS feedback — our placement rate is up 30%.",
     image:
       "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
     name: "James Wilson",
@@ -54,7 +54,7 @@ const testimonials = [
     role: "UX Designer",
   },
   {
-    text: "I used TeXel to write my thesis and my resume. Having one tool for both technical writing and job apps is a huge time-saver.",
+    text: "I used Vero to write my thesis and my resume. Having one tool for both technical writing and job apps is a huge time-saver.",
     image:
       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
     name: "Michael Brown",
@@ -101,7 +101,7 @@ export function TestimonialsSection() {
             Loved by job seekers & writers
           </h2>
           <p className="text-center mt-4 text-zinc-500 text-lg text-balance">
-            See how TeXel is helping people land interviews and write better
+            See how Vero is helping people land interviews and write better
             documents.
           </p>
         </motion.div>

@@ -1,55 +1,40 @@
 import { Check } from "lucide-react";
 import Link from "next/link";
+import { appLinks, pricing } from "@/lib/site";
 
+// Mirrors the dashboard's billing page (latex-ai-editor/src/app/(app)/billing).
 const plans = [
   {
     name: "Free",
-    description: "Perfect for trying out TeXel",
+    description: "Build and check a resume properly, for free.",
     price: "$0",
     period: "forever",
     features: [
-      "LaTeX editor with live preview",
-      "1 resume project",
-      "Basic templates",
-      "Export to PDF",
-      "Community support",
+      `${pricing.free.resumes} resumes, every template`,
+      "LaTeX editor with live PDF preview",
+      `${pricing.free.aiEditsPerMonth} AI edits a month`,
+      "ATS check",
+      "PDF download",
     ],
     cta: "Start Writing Free",
+    href: appLinks.start,
     highlighted: false,
   },
   {
     name: "Pro",
-    description: "For serious job seekers and writers",
-    price: "$12",
+    description: "For an active job search: unlimited resumes and far more AI.",
+    price: pricing.pro.price,
     period: "/month",
     features: [
-      "Unlimited projects",
-      "Inline AI editing",
-      "All professional templates",
-      "Real-time ATS scoring",
-      "Priority support",
-      "Version history",
-      "Custom LaTeX packages",
+      "Unlimited resumes",
+      `${pricing.pro.aiEditsPerMonth.toLocaleString("en-US")} AI edits a month`,
+      "Everything in Free",
+      "New AI features first: command bar, job tailoring",
+      "Cancel anytime",
     ],
-    cta: "Start Free Trial",
+    cta: "Upgrade to Pro",
+    href: appLinks.pro,
     highlighted: true,
-  },
-  {
-    name: "Teams",
-    description: "For career centers and organizations",
-    price: "Custom",
-    period: "",
-    features: [
-      "Everything in Pro",
-      "Team management dashboard",
-      "Custom branded templates",
-      "Bulk ATS analysis",
-      "SSO & admin controls",
-      "Dedicated support",
-      "Onboarding & training",
-    ],
-    cta: "Contact Sales",
-    highlighted: false,
   },
 ];
 
@@ -66,12 +51,12 @@ export function PricingSection() {
             Simple, transparent pricing
           </h2>
           <p className="text-zinc-500 max-w-xl mx-auto text-balance text-lg">
-            Start free. Upgrade when you need AI editing and ATS scoring.
+            Start free. Upgrade when you need unlimited resumes and more AI edits.
           </p>
         </div>
 
         {/* Pricing Grid */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -129,7 +114,7 @@ export function PricingSection() {
 
               {/* CTA */}
               <Link
-                href="#"
+                href={plan.href}
                 className={`block w-full py-3 px-6 text-center rounded-full font-medium text-sm transition-colors mt-auto ${
                   plan.highlighted
                     ? "bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
@@ -141,6 +126,9 @@ export function PricingSection() {
             </div>
           ))}
         </div>
+        <p className="mt-6 text-center text-sm text-zinc-600">
+          Prices in USD, tax included. Payments are handled securely by Dodo Payments.
+        </p>
       </div>
     </section>
   );

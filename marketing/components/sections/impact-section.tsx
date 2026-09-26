@@ -18,7 +18,7 @@ export function ImpactSection() {
             Results that speak for themselves
           </h2>
           <p className="text-zinc-500 max-w-lg mx-auto text-balance">
-            TeXel users write better resumes and land more interviews.
+            Vero users write better resumes and land more interviews.
           </p>
         </div>
 

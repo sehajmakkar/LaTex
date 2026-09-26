@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { LiquidCtaButton } from "@/components/buttons/liquid-cta-button";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { appLinks } from "@/lib/site";
 
 export function HeroSection() {
   return (
@@ -37,7 +38,7 @@ export function HeroSection() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="#pricing">
+          <Link href={appLinks.start}>
             <LiquidCtaButton>Start Writing Free</LiquidCtaButton>
           </Link>
           <Link

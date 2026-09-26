@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { appLinks } from "@/lib/site";
 
 const navLinks = [
   { href: "#features", label: "Features" },
   { href: "#testimonials", label: "Testimonials" },
   { href: "#pricing", label: "Pricing" },
+  { href: "#faq", label: "FAQ" },
 ];
 
 export function Navbar() {
@@ -19,7 +21,7 @@ export function Navbar() {
           href="/"
           className="font-display text-lg font-semibold text-zinc-100"
         >
-          TeXel
+          Vero
         </Link>
         <div className="flex items-center gap-2 md:gap-1">
           {/* Desktop nav links */}
@@ -36,12 +38,12 @@ export function Navbar() {
           </div>
           
           {/* Get Started button - always visible, but smaller on mobile */}
-          <Link
-            href="#pricing"
+          <a
+            href={appLinks.start}
             className="ml-0 md:ml-2 px-3 py-1.5 md:px-4 text-xs md:text-sm whitespace-nowrap rounded-full bg-zinc-100 text-zinc-900 font-medium hover:bg-zinc-200 transition-colors"
           >
             Get Started
-          </Link>
+          </a>
 
           {/* Mobile hamburger button */}
           <button
@@ -73,7 +75,7 @@ export function Navbar() {
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out px-2 ${
           mobileMenuOpen
-            ? "max-h-60 opacity-100 mt-2"
+            ? "max-h-80 opacity-100 mt-2"
             : "max-h-0 opacity-0 mt-0"
         }`}
       >

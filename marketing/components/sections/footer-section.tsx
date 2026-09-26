@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { Github, Twitter, Linkedin } from "lucide-react";
+import { CONTACT_EMAIL, appLinks } from "@/lib/site";
 
 const footerLinks = {
   product: [
     { label: "Features", href: "#features" },
-    { label: "Templates", href: "#" },
+    { label: "Templates", href: appLinks.templates },
+    { label: "Free ATS check", href: appLinks.ats },
     { label: "Pricing", href: "#pricing" },
-    { label: "Changelog", href: "#" },
+    { label: "FAQ", href: "#faq" },
   ],
   company: [
     { label: "About", href: "#" },
     { label: "Blog", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "Log in", href: appLinks.signIn },
+    { label: "Contact", href: CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : "#" },
     { label: "Careers", href: "#" },
   ],
   legal: [
@@ -32,7 +35,7 @@ export function FooterSection() {
               href="/"
               className="font-display text-xl font-semibold text-zinc-100"
             >
-              TeXel
+              Vero
             </Link>
             <p className="mt-4 text-sm text-zinc-500 max-w-xs">
               The AI-native writing workspace for LaTeX, resumes, and technical
@@ -101,7 +104,7 @@ export function FooterSection() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-zinc-900 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-zinc-600">
-            © {new Date().getFullYear()} TeXel. All rights reserved.
+            © {new Date().getFullYear()} Vero. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { LiquidCtaButton } from "@/components/buttons/liquid-cta-button";
+import { appLinks } from "@/lib/site";
 
 export function CtaSection() {
   return (
@@ -10,15 +11,15 @@ export function CtaSection() {
           Ready to write a stronger resume?
         </h2>
         <p className="text-lg text-zinc-500 mb-10 text-balance">
-          Join thousands of job seekers and researchers already using TeXel to
+          Join thousands of job seekers and researchers already using Vero to
           write, refine, and land faster.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="#pricing">
+          <Link href={appLinks.start}>
             <LiquidCtaButton>Start Writing Free</LiquidCtaButton>
           </Link>
           <Link
-            href="#"
+            href="#features"
             className="group flex items-center gap-2 px-6 py-3 text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
           >
             <span>See how it works</span>

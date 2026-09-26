@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Zap, BarChart3, Layers, ArrowRight, Command } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { appLinks } from "@/lib/site";
 
 const integrationLogos = [
   { name: "Apple", src: "/logo/512px-Apple_logo_white.svg.png" },
@@ -324,12 +325,13 @@ export function FeaturesSection() {
                     </motion.div>
                   ))}
                 </div>
-                <motion.button
+                <motion.a
+                  href={appLinks.ats}
                   whileHover={{ x: 6 }}
-                  className="mt-4 flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="mt-4 flex w-fit items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
-                  See scoring criteria <ArrowRight className="w-4 h-4" />
-                </motion.button>
+                  Check your resume free <ArrowRight className="w-4 h-4" />
+                </motion.a>
               </CardContent>
             </Card>
           </motion.div>

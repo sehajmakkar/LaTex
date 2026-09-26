@@ -404,17 +404,34 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 
 **Decisions (from you):** keep every section. Testimonials stay and get **real quotes from friends**. The company logos stay because they build conviction (people build resumes to get into these companies), but their **wording** changes. Adding sections and marketing/SEO content is welcome. Look at Awwwards again when this phase starts.
 
-**Rework (to do)**
-- [ ] **(High)** Rebrand TeXel → Vero everywhere (navbar, footer, metadata, copy); swap in the Vero mark/icons once brand assets exist.
-- [ ] **(High)** CTAs → the app with intents, base URL from `NEXT_PUBLIC_APP_URL` (now `https://hirex-omega.vercel.app`; later `https://app.tryvero.app`): Get started → `/sign-up?intent=start`, Log in → `/sign-in`, Free ATS → `/sign-up?intent=ats`, Go Pro → `/sign-up?intent=pro`, template tiles → `intent=template:<id>`.
-- [ ] **(High)** Pricing: Free $0 / **Pro $5.99** with the real limits from `plans.ts`; keep Teams as "Contact us" or drop it (your call).
-- [ ] **(High, before launch)** Testimonials: replace the placeholder quotes with your friends' real ones (name, role, optional photo, with their permission). Until then, show them only in development, or ship the real ones first; invented quotes must not go live.
-- [ ] **(High, before launch)** Unverifiable claims: "Join thousands of job seekers…" and "placement rate is up 30%" → honest copy until there are real numbers.
-- [ ] **(Medium)** Company logos: reword the framing from integration/partner ("integrationLogos" under the ATS card) to aspiration, e.g. *"Build a resume ready for roles at companies like…"*, and add a small line in the footer: *"Company names and logos are trademarks of their owners. Vero is not affiliated with them."*
-- [ ] **(Medium)** Build hygiene: remove `typescript.ignoreBuildErrors`, move to React 19 (Next 16 expects it), prune ~30 unused shadcn components.
-- [ ] **(Medium)** SEO and marketing content: title/description per section, `sitemap.xml`, `robots.txt`, OG/Twitter image, JSON-LD (SoftwareApplication + FAQ), an FAQ section, a "How it works" section, a template gallery linked to the app, a "Free ATS checker" section as an SEO entry point; drop the `generator: v0.app` metadata.
-- [ ] **(Medium)** Design pass using Awwwards references (the `awwwards-mcp` Docker setup from Phase 3), keeping the shared design language with the dashboard.
-- [ ] **(Low)** Shared brand bits (logo, name, pricing numbers) in one place both apps read, if duplication starts to hurt.
+**Rework, round 1 ✅ (26 Sep 2026)** (existing design kept as is; a first attempt with a redesign was reverted at your request)
+- [x] Rebrand TeXel → **Vero** (navbar, footer, metadata, pricing, testimonial and CTA copy).
+- [x] **Every button goes to its place in the dashboard**, login first and then the intended page (from `marketing/lib/site.ts`, `NEXT_PUBLIC_APP_URL`, default `https://hirex-omega.vercel.app`):
+  - Get Started / Start Writing Free → `/sign-up?intent=start` (Resumes).
+  - ATS buttons (features card, new ATS section, footer) → `/sign-up?intent=ats` (ATS page after login).
+  - Upgrade to Pro → `/sign-up?intent=pro` (straight to Dodo checkout after login).
+  - Log in → `/sign-in`; footer Templates → `/templates`.
+  - "See how it works" → `#features`.
+- [x] **Pricing = the dashboard's billing page:** Free $0 (3 resumes, every template, 40 AI edits/month, ATS check, PDF) and **Pro $5.99/month, tax included** (unlimited resumes, 1,000 AI edits/month, new AI features first, cancel anytime). The Teams card was dropped for parity.
+- [x] New **FAQ** section (8 questions) with FAQ structured data; **FAQ** added to the navbar.
+- [x] New **Free ATS check** CTA section (after Features).
+- [x] **SEO:**
+  - metadata (title, description, keywords, canonical, Open Graph, Twitter);
+  - author/creator **Sehaj**; the `generator: v0.app` tag removed; package renamed `vero-marketing`;
+  - JSON-LD (`SoftwareApplication` with Free and Pro offers, plus `FAQPage`);
+  - `robots.txt` (Vercel previews blocked) and `sitemap.xml`;
+  - generated share image; Vero favicon and Apple icon.
+- [x] Fixed: the old favicons were **base64 text saved as .png/.svg** (a v0 export artifact), so browsers couldn't show them. They're replaced.
+- [x] No dependency changes. `npm run build` passes; in a browser every button resolves correctly and there are no console errors (a local 404 for `/_vercel/insights/script.js` is expected; it only exists on Vercel).
+
+**Still to do** (by priority):
+- [ ] **(High, you, before launch)** Replace the testimonials with real ones (your decision: the current ones stay until then). Before launch, also replace the hero's "Trusted by 10,000+" with the 5.0 stars and stock avatars, and the CTA's "Join thousands…", since those are claims too.
+- [ ] **(Medium)** Footer `#` links with no destination yet: About, Blog, Careers, Privacy, Terms, Security, social icons, and Contact until `NEXT_PUBLIC_CONTACT_EMAIL` is set. Privacy and Terms come with Phase 6.
+- [ ] **(Medium, Phase 4)** Point the ATS buttons straight to the anonymous `/ats/free` once it works without sign-up.
+- [ ] **(Medium, Phase 6)** Set `NEXT_PUBLIC_SITE_URL`/`NEXT_PUBLIC_APP_URL` to the real domain.
+- [ ] **(Low)** Company logos: word them as aspiration (not integration) and add a not-affiliated note; use official brand-kit assets.
+- [ ] **(Low)** `next.config.mjs` still has `ignoreBuildErrors: true` (no errors today), and the site runs React 18 with Next 16 (Next expects React 19). Clean up later with the ~30 unused v0 components.
+- [ ] **(Later)** Awwwards-led design pass; per-template SEO pages.
 
 ---
 
