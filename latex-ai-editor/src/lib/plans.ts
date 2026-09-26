@@ -13,11 +13,13 @@ export type PlanLimits = {
   projects: number;
   aiEditsPerMonth: number;
   aiEditsPerMinute: number;
+  /** ATS scans that include the AI review (rule-based checks are unlimited). */
+  atsAiReviewsPerMonth: number;
 };
 
 export const PLANS: Record<PlanId, PlanLimits> = {
-  free: { projects: FREE_PROJECT_LIMIT, aiEditsPerMonth: 40, aiEditsPerMinute: 10 },
-  pro: { projects: 100, aiEditsPerMonth: 1000, aiEditsPerMinute: 20 },
+  free: { projects: FREE_PROJECT_LIMIT, aiEditsPerMonth: 40, aiEditsPerMinute: 10, atsAiReviewsPerMonth: 5 },
+  pro: { projects: 100, aiEditsPerMonth: 1000, aiEditsPerMinute: 20, atsAiReviewsPerMonth: 60 },
 };
 
 /** Maps the stored plan string (including legacy "pro_plus") to limits. */

@@ -31,6 +31,15 @@ class UserUsageRepository {
     return row?.total ?? 0;
   }
 
+  /** ATS scans with an AI review since `monthStart` (YYYY-MM-DD). */
+  async sumAtsScansSince(userId: string, monthStart: string): Promise<number> {
+    const [row] = await db
+      .select({ total: sql<number>`coalesce(sum(${userUsage.atsScans}), 0)::int` })
+      .from(userUsage)
+      .where(and(eq(userUsage.userId, userId), gte(userUsage.date, monthStart)));
+    return row?.total ?? 0;
+  }
+
   async incrementAiEdits(userId: string, today: string) {
     await this.getOrCreateToday(userId, today);
     await db

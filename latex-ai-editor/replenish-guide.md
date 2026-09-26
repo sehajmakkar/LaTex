@@ -399,3 +399,63 @@ Optional env vars (`marketing/.env.example`): `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLI
 | 8 | | |
 | 9 | | |
 | 10 | | |
+
+---
+
+## Step: Phase 4, ATS rebuild (26 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Engine | New two-layer ATS: extraction with layout signals (multi-column, icons, tables), ATS-style parse, 11 rule-based categories, AI content review + AI job match with **server-side verification**, weighted scores | `src/services/ats/*` (old ATS services removed) |
+| Projects | A project scan **compiles the resume to PDF** first and checks that PDF (stored for the preview) | `src/services/compile-service.ts`, `src/app/api/ats/scan/route.ts` |
+| API | One `POST /api/ats/scan` (file upload or `projectId`, + JD or target role); the reports API gates Pro details for Free | `src/app/api/ats/scan`, `src/app/api/ats/reports/[id]` |
+| Limits | Rule-based check unlimited; AI review Free 5 / Pro 60 per month | `src/lib/plans.ts`, `/api/usage` |
+| Scan page | Resume picker or drag-and-drop, JD or target role, progress, AI reviews left, recent reports | `src/app/(app)/ats/page.tsx` |
+| Report page | ResumeWorded-style: score strip, Top fixes / Completed rail, detail panels, What the ATS sees, Job match, **PDF preview (also for projects)**, blurred Pro sections | `src/app/(app)/ats/[id]/page.tsx`, `src/components/ats/*` |
+| Fix in editor | Opens the resume, selects the bullet, opens ⌘K with the prompt pre-filled | `src/components/editor/*`, `src/app/(editor)/project/[id]/page.tsx` |
+| `/ats/free` | Now a redirect (sign-up with `intent=ats`, or `/ats`) | `src/app/(app)/ats/free/page.tsx` |
+
+### What I already verified
+- **Unit tests 43/43** (16 new for ATS and the bullet locator).
+- Engine on 5 compiled templates: both sidebar templates flagged as multi-column; single-column ones not.
+- AI run: sensible bullet rewrites with [X] placeholders, real typos found in the default resume, JD requirements verified against the text.
+- **End-to-end API (dev server, temporary user, deleted afterwards): 10/10**: project scan, Free redaction, compiled-PDF preview, two-column upload, DOCX + target role, fake PDF rejected, quota fallback, usage counter, access control.
+- `tsc`, ESLint (0 errors), `npm run build`.
+
+### Setup
+Restart `npm run dev`. No new env vars or database changes. (`R2_*` must be set for previews, as it already is.)
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | `/ats` → **One of my resumes** → pick one → paste a real job description → **Run ATS check** | Progress steps, then the report in ~10 s |
+| 2 | Report header | ATS score, 3 group scores, Job match %; "Open in editor" / "New check" |
+| 3 | Right side (wide screen) | **The compiled PDF** of your resume (not LaTeX code) |
+| 4 | Left rail | "Top fixes" (lowest first) and "Completed", each with a /10 badge |
+| 5 | Overview → **What the ATS sees** | Your name, email, phone, sections, roles, skills as a parser reads them |
+| 6 | **Job match** | Required / Nice to have with ✓ / ≈ (implied) / ✗ and quoted evidence |
+| 7 | **Bullet strength** | First 2 fixes show rewrite + prompt; the rest are blurred with "See the rewrite and prompt with Pro" |
+| 8 | **Fix in editor** on a fix | Editor opens, the bullet is selected, ⌘K is open with the prompt filled → press Enter → diff → ⌘Y |
+| 9 | `/ats` → **Upload a file** → a two-column PDF resume | "Layout & file" shows **Multi-column layout detected** |
+| 10 | Upload a DOCX with only a **target role** | Job match based on typical requirements for that role |
+| 11 | Narrow window | Section dropdown + "Resume" button instead of the rail and preview |
+| 12 | Open an old report from before today | "This report uses the old ATS check" + Run a new check |
+| 13 | Signed out: open `/ats/free` | Goes to sign-up; after sign-up lands on `/ats` |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |
+| 8 | | |
+| 9 | | |
+| 10 | | |
+| 11 | | |
+| 12 | | |
+| 13 | | |

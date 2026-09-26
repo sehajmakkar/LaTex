@@ -103,7 +103,7 @@ export function stripFences(text: string): string {
 }
 
 /** Numbers like 35, 2.5, 1,000 (commas ignored when comparing). */
-function numbersIn(text: string): Set<string> {
+export function numbersIn(text: string): Set<string> {
   return new Set((text.match(/\d+(?:[.,]\d+)*/g) ?? []).map((n) => n.replace(/,/g, "")));
 }
 

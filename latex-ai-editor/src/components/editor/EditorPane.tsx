@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
 import { EditorSkeleton } from "./EditorSkeleton";
+import type { FixRequest } from "./CodeMirrorEditor";
 import {
   Tooltip,
   TooltipContent,
@@ -21,10 +22,12 @@ const CodeMirrorEditor = dynamic(
 type EditorPaneProps = {
   value: string;
   onChange: (value: string) => void;
+  fixRequest?: FixRequest | null;
+  onFixHandled?: () => void;
   className?: string;
 };
 
-export function EditorPane({ value, onChange, className }: EditorPaneProps) {
+export function EditorPane({ value, onChange, className, fixRequest, onFixHandled }: EditorPaneProps) {
   return (
     <div className="flex h-full flex-col bg-background">
       <div className="flex items-center justify-between border-b border-border bg-background/70 px-4 py-2">
@@ -61,7 +64,7 @@ export function EditorPane({ value, onChange, className }: EditorPaneProps) {
         </TooltipProvider>
       </div>
       <div className="flex-1 overflow-hidden">
-        <CodeMirrorEditor value={value} onChange={onChange} className={className} />
+        <CodeMirrorEditor value={value} onChange={onChange} className={className} fixRequest={fixRequest} onFixHandled={onFixHandled} />
       </div>
     </div>
   );

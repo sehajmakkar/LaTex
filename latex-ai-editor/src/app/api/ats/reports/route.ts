@@ -23,6 +23,8 @@ export async function GET() {
         createdAt: r.createdAt,
         source: r.source,
         projectId: r.projectId,
+        fileName: r.resumeFileName,
+        hasJob: !!r.jobDescription,
       })),
     });
   } catch (error) {

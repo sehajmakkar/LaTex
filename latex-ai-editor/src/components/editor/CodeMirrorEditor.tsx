@@ -2,20 +2,26 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import { EditorSelection, EditorState } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, indentOnInput } from "@codemirror/language";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { lintKeymap } from "@codemirror/lint";
 import { latex } from "codemirror-lang-latex";
-import { aiExtension } from "@marimo-team/codemirror-ai";
+import { aiExtension, showAiEditInput } from "@marimo-team/codemirror-ai";
+import { locateBullet } from "./locate-bullet";
 import { toast } from "sonner";
+
+/** A fix requested from the ATS report: select this bullet and pre-fill ⌘K. */
+export type FixRequest = { text: string; prompt: string };
 
 type CodeMirrorEditorProps = {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  fixRequest?: FixRequest | null;
+  onFixHandled?: () => void;
 };
 
 type AIEditErrorBody = {
@@ -73,7 +79,7 @@ async function handleAIPrompt({
 // Do NOT wrap in hsl() — that only works when the variable stores bare "H S% L%" channels.
 // For alpha variants, use color-mix(in oklch, var(--x) N%, transparent).
 
-export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEditorProps) {
+export function CodeMirrorEditor({ value, onChange, className, fixRequest, onFixHandled }: CodeMirrorEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -381,6 +387,35 @@ export function CodeMirrorEditor({ value, onChange, className }: CodeMirrorEdito
       });
     }
   }, [value]);
+
+  // ATS "Fix in editor": select the bullet and open ⌘K with the prompt filled in.
+  // Declared after the mount effect, so the view already exists when it runs.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !fixRequest) return;
+    const range = locateBullet(view.state.doc.toString(), fixRequest.text);
+    onFixHandled?.();
+    if (!range) {
+      navigator.clipboard?.writeText(fixRequest.prompt).catch(() => {});
+      toast.info("Couldn't find that bullet automatically", {
+        description: "The prompt is copied: select the bullet, press ⌘K and paste.",
+      });
+      return;
+    }
+    view.dispatch({ selection: EditorSelection.range(range.from, range.to), scrollIntoView: true });
+    view.focus();
+    showAiEditInput(view);
+    // The ⌘K input is created on the next frame; fill it so the user just presses Enter.
+    const timer = setTimeout(() => {
+      const input = view.dom.querySelector<HTMLInputElement | HTMLTextAreaElement>(".cm-ai-input");
+      if (!input) return;
+      const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set;
+      setter?.call(input, fixRequest.prompt);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [fixRequest, onFixHandled]);
 
   return (
     <div

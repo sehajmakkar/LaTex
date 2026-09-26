@@ -435,43 +435,73 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 
 ---
 
-### Phase 4: Rebuild ATS as a free tool (≈4–5 days)
+### Phase 4: Rebuild ATS ✅ *Implemented 26 Sep 2026. Steps are in `replenish-guide.md`.*
 
-**Problem today:** one blended score (`parse*0.6 + llm*0.4`) mixes deterministic parsing with AI opinion. The components are unreliable (see §0 bug #4), and the "free" tool has paywalled sections.
+**Research**:
+- Screening is now **two layers**:
+  1. the classic parser + keyword filter (Workday, Taleo, iCIMS, Greenhouse, Lever), which fails on columns, tables, text boxes, headers/footers and non-standard headings;
+  2. **AI semantic matching** that ranks the survivors (Workday; Greenhouse since Feb 2026).
+- Jobscan weights **hard skills** most, then title, education/years, soft skills; target **75–80%**.
+- ResumeWorded-style reports: a category rail (Top fixes / Completed, scored /10), a detail panel, and the resume alongside.
 
-**New structure: three clearly separated tabs on one report**
+**Decision (from you):** the ATS check needs sign-in (sign-up is the conversion step); details are gated for Free. `/ats/free` now redirects: signed-in → `/ats`, signed-out → `/sign-up?intent=ats`. This replaces the earlier "anonymous check" idea.
 
+**Engine** (`src/services/ats/`, replaces the old rule-based/LLM services)
+- [x] **One pipeline for every source:** a project is **compiled to PDF first** (the file an employer receives), so projects and uploads (PDF, DOCX, TXT) go through the same steps. Magic-byte checks on uploads.
+- [x] **Extraction with layout signals:**
+  - PDF text rebuilt line by line from item positions;
+  - **multi-column detection** (many rows starting at one fixed x past 30% of the width), tuned on our sidebar templates: both flagged, no false positives on single-column ones;
+  - icon-font glyphs, pages, text layer; DOCX tables and images.
+- [x] **ATS-style parse** ("What the ATS sees"):
+  - contact details, including a phone rule that never takes a date range;
+  - **section synonyms** (Work Experience = Experience…), with unrecognised headings flagged;
+  - roles with dates and bullets (multi-line merged), education, skills;
+  - years of experience with overlaps merged.
+- [x] **11 rule-based categories, scored /10**, free and unlimited:
+  - ATS parsing: Contact, Section headings, Dates, Layout & file;
+  - Impact: Quantified impact, Action verbs (past and present tense), Repetition;
+  - Brevity & style: Length, Bullet length, Buzzwords & filler, Unnecessary sections.
+- [x] **AI layer** (`gemini-3.6-flash`, two parallel calls, JSON schemas, user text treated as data):
+  - **Content review:** summary, strengths, **Bullet strength** (the weakest bullets, by number, with issues, rewrite and a **ready-made ⌘K prompt**; rewrites that invent numbers are dropped), and spelling/grammar kept only if it really appears in the resume.
+  - **Job match** from a JD or a **target role**: requirements with kind and importance, then **code re-verifies every match**. Exact/synonym matches via a skills dictionary; "semantic" only if the AI's quoted evidence exists in the resume.
+- [x] **Scores:**
+  - **ATS score** 0–100 = parsing 40% + impact 35% + style 25%.
+  - **Job match %** = hard/tool skills weighted 3 (required) / 1.5 (preferred), certifications and education 2/1, soft skills 1/0.5, semantic = 75% credit, title 15%, a years shortfall costs up to 10.
+  - Keyword-only fallback when the AI doesn't run.
+- [x] **Plans:** the rule-based check is always free and unlimited. The **AI review is Free 5 / Pro 60 per month** (`plans.ts`, counted in `user_usage.ats_scans`); past the quota → rule-based plus keyword match, with an upgrade prompt. A failed AI call isn't charged.
+- [x] **Gating on the server** (`redact.ts`): Free sees all scores, findings and the parse view, plus the **first 2 rewrites/prompts, the first 5 missing keywords and 3 list items**. The rest is removed before the response is sent and shows blurred with "Unlock with Pro".
 
-| Tab                                         | What it answers                                                                                                                                                                                                                                     | Engine                                                                                                                       | Deterministic?                       |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **1. Parse check**: "Can an ATS read this?" | Shows exactly what an ATS extracts: name, contact, sections, jobs with dates, education, skills. Also flags risks: multi-column layout, tables, icons/images, non-standard headings, missing dates, text in headers/footers, PDF with no text layer | Rule-based                                                                                                                   | Yes, same input gives the same score |
-| **2. Job match** (only when a JD is given)  | Required vs. nice-to-have skills: found, missing, and partially matched (synonyms such as "JS" and "JavaScript")                                                                                                                                    | LLM extracts skills from the JD **once**, then deterministic matching against the resume, plus a curated skills/synonym list | Matching is deterministic            |
-| **3. Content review**                       | Bullet quality: action verbs, quantified impact, length, repetition, and 3–5 rewrites                                                                                                                                                               | LLM with a **JSON schema** (`responseMimeType: application/json`)                                                            | No; labelled "AI feedback"           |
+**UI**
+- [x] `/ats`:
+  - choose one of your resumes (compiled) or drag-and-drop a file;
+  - **job description** or **target role**;
+  - progress steps; "AI review · X of 5 left this month";
+  - recent reports with score and match %.
+- [x] `/ats/[id]` rebuilt (ResumeWorded-style):
+  - header with **Open in editor / New check**;
+  - score strip (ATS score, ATS parsing / Impact / Style, Job match);
+  - left rail **Top fixes / Completed** with /10 badges;
+  - detail panels (Overview with summary, strengths, "Fix these first" and **What the ATS sees**; each category; **Job match** with required/preferred, evidence, title and years);
+  - **PDF preview on the right**: a project scan shows its compiled PDF, not LaTeX;
+  - mobile section picker; old reports show "run a new check".
+- [x] **Fix in editor:** opens the project, **finds the bullet in the LaTeX source** (word overlap, LaTeX stripped), selects it and **opens ⌘K with the prompt pre-filled**. If it can't be found, the prompt is copied with a hint. Uploaded files get **Copy prompt**.
+- [x] Fixed on the way: the editor mounted **two CodeMirror instances** (the hidden mobile one plus desktop); it now renders only the one for the screen size. The compile logic moved into `compile-service.ts` (shared by `/api/compile` and ATS), and a busy compiler now returns a clear 503.
 
+**Verified:**
+- Vitest **43/43** (16 new: parser, phone vs dates, alias matching, **fabricated-evidence rejection**, rules, **redaction**, bullet locator).
+- Engine run on 5 compiled templates (column detection, parse quality).
+- AI run on the default resume + JD (6.2 s; sensible rewrites with [X]; real typos found; CI/CD matched via "continuous delivery").
+- **End-to-end API through the dev server, 10/10:** project scan, redaction, compiled-PDF preview, two-column upload, DOCX + role, fake PDF rejected, quota fallback, usage, access control.
+- `tsc`, ESLint (0 errors) and build pass.
 
-- [ ] Scanning an empty or near-empty project returns a clear error, not a score of 0.
-- [ ] Rewrite `rule-based-ats.ts`:
-  - Fuzzy heading detection with a synonym table (Work Experience / Professional Experience / Employment → experience).
-  - Stopword removal.
-  - Scoring out of 100 even without a JD.
-  - A proper phone regex.
-  - Date-range parsing.
-  - PDF layout heuristics (columns detected from `pdfjs` text positions).
-- [ ] Add unit tests using real sample resumes (Vitest is already installed): each of our templates, plus a few messy PDFs and DOCX files.
-- [ ] If the LLM fails, show tabs 1–2 anyway and mark tab 3 "unavailable, retry".
-- [ ] Headline number: show **the Parse score and the Match score separately**, not a blended score.
-- [ ] **Free for everyone** (per your direction), including signed-out users on `/ats/free`:
-  - Make `/api/ats/upload` and `/api/ats/analyze` work anonymously, with rate limiting by IP (Upstash Redis free tier or a Postgres table) plus Turnstile/captcha.
-  - Anonymous reports expire and are not saved to an account. Sign-in keeps history and lets you "Fix in editor".
-  - Remove the "pro" locks from report sections. Monetise via the editor instead (AI command bar, tailoring).
-- [ ] Every finding links to an action: "Fix in editor" opens the project, jumps to the line, and pre-fills the AI command bar ("Quantify this bullet").
-- [ ] Move the ATS tool out of the editor settings dropdown into the main nav, and add an **"ATS check"** button in the editor header that scans the current document.
-
-**Done when:** the same resume always gets the same parse score, every template scores ≥ 90 on the parse check, and a signed-out user can scan a PDF from the landing page.
-
----
-
-
+**Follow-ups found in Phase 4** (by priority):
+- [ ] **(Medium, you)** Browser check of the new report page and **Fix in editor**: the ⌘K pre-fill relies on the editor extension's DOM, so check it once.
+- [ ] **(Medium)** The job-match % varies between runs for the same resume and JD (78% vs 65% seen), because the AI's requirement list differs. Rule-based scores are deterministic. Options: cache the JD requirements per JD hash, or use temperature 0 for extraction.
+- [ ] **(Medium)** Parser heuristics: for some templates the title and company come out merged or swapped (e.g. "Software Engineer Company Name"); location isn't found when written without a comma. Improve with more sample resumes (collect anonymised real PDFs).
+- [ ] **(Medium, Phase 7)** Uploaded resumes can't use one-click fixes. "Import into Vero" (PDF/DOCX → template) would unlock them, and it's the P1 importer.
+- [ ] **(Low)** The per-minute scan limit is in memory (same as ⌘K); move it to Upstash later.
+- [ ] **(Low)** Old v1 reports can't be shown in the new layout (they show "run a new check"). Delete them in a later migration.
+- [ ] **(Low)** Marketing: the ATS CTAs can stay on `/sign-up?intent=ats` (sign-in is required by design now).
 
 ### Phase 5: AI command bar, the third way to edit (≈6–8 days)
 

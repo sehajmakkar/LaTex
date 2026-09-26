@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/resizable";
 import { EditorHeader, type SaveState } from "@/components/editor/EditorHeader";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import type { FixRequest } from "@/components/editor/CodeMirrorEditor";
 import { EditorPane } from "@/components/editor/EditorPane";
 import { PdfPreview } from "@/components/preview/PdfPreview";
 import { useEditorStore } from "@/stores/editor-store";
@@ -31,6 +33,25 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   const [projectLoaded, setProjectLoaded] = useState(false);
   const { compileState, setCompileState, pdfUrl, setPdfUrl, activeTab, setActiveTab } = useEditorStore();
   const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [fixRequest, setFixRequest] = useState<FixRequest | null>(null);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  // "Fix in editor" from an ATS report: ?fix=<bullet>&prompt=<instruction>
+  useEffect(() => {
+    if (!projectLoaded) return;
+    const params = new URLSearchParams(window.location.search);
+    const text = params.get("fix");
+    const prompt = params.get("prompt");
+    if (text && prompt) {
+      setActiveTab("source");
+      setFixRequest({ text, prompt });
+    }
+  }, [projectLoaded, setActiveTab]);
+
+  const handleFixHandled = useCallback(() => {
+    setFixRequest(null);
+    router.replace(`/project/${id}`, { scroll: false });
+  }, [router, id]);
 
   // The store is global: clear the previous resume's PDF when a project opens.
   useEffect(() => {
@@ -166,42 +187,45 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         onRename={id !== "new" && UUID_REGEX.test(id) ? handleRename : undefined}
       />
 
-      {/* Mobile: one pane at a time */}
-      <div className="flex border-b md:hidden" role="tablist" aria-label="Editor view">
-        {(["source", "output"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "flex-1 py-2.5 text-sm",
-              activeTab === tab ? "border-b-2 border-foreground font-medium" : "text-muted-foreground"
+      {isDesktop ? (
+        <ResizablePanelGroup orientation="horizontal" className="flex-1">
+          <ResizablePanel defaultSize={55} minSize={30}>
+            <EditorPane value={content} onChange={setContent} fixRequest={fixRequest} onFixHandled={handleFixHandled} />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={45} minSize={25}>
+            <PdfPreview url={pdfUrl} isLoading={isCompiling} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <>
+          {/* Mobile: one pane at a time */}
+          <div className="flex border-b" role="tablist" aria-label="Editor view">
+            {(["source", "output"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "flex-1 py-2.5 text-sm",
+                  activeTab === tab ? "border-b-2 border-foreground font-medium" : "text-muted-foreground"
+                )}
+              >
+                {tab === "source" ? "Code" : "Preview"}
+              </button>
+            ))}
+          </div>
+          <div className="min-h-0 flex-1">
+            {activeTab === "source" ? (
+              <EditorPane value={content} onChange={setContent} fixRequest={fixRequest} onFixHandled={handleFixHandled} />
+            ) : (
+              <PdfPreview url={pdfUrl} isLoading={isCompiling} />
             )}
-          >
-            {tab === "source" ? "Code" : "Preview"}
-          </button>
-        ))}
-      </div>
-      <div className="min-h-0 flex-1 md:hidden">
-        {activeTab === "source" ? (
-          <EditorPane value={content} onChange={setContent} />
-        ) : (
-          <PdfPreview url={pdfUrl} isLoading={isCompiling} />
-        )}
-      </div>
-
-      {/* Desktop: side by side */}
-      <ResizablePanelGroup orientation="horizontal" className="hidden flex-1 md:flex">
-        <ResizablePanel defaultSize={55} minSize={30}>
-          <EditorPane value={content} onChange={setContent} />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={45} minSize={25}>
-          <PdfPreview url={pdfUrl} isLoading={isCompiling} />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          </div>
+        </>
+      )}
     </>
   );
 }
