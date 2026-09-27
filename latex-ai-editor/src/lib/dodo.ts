@@ -11,10 +11,7 @@ function getDodoClient(): DodoPayments | null {
 
 export const dodoClient = getDodoClient();
 
-export type PlanSlug = "free" | "pro" | "pro_plus";
-
-export function getProductIdForPlan(plan: "pro" | "pro_plus"): string | null {
-  if (plan === "pro") return env.DODO_PRODUCT_ID_PRO ?? null;
-  if (plan === "pro_plus") return env.DODO_PRODUCT_ID_PRO_PLUS ?? null;
-  return null;
+/** The product new subscriptions are created for (Pro, $5.99/month). */
+export function proProductId(): string | null {
+  return env.DODO_PRODUCT_ID_PRO ?? null;
 }

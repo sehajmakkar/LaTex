@@ -241,7 +241,7 @@ Optional `.env` addition (the default already applies): `GEMINI_MODEL_FAST=gemin
 | Auth + flow | Branded sign-in/up; `/` redirects; **intents** from the landing site survive sign-up; `redirect_url` honoured (same-site only) | `src/app/sign-*`, `src/app/page.tsx`, `src/lib/intents.ts`, `src/lib/auth-params.ts`, `src/components/shell/IntentHandler.tsx` |
 | Errors | Branded 404 and error pages | `src/app/not-found.tsx`, `src/app/error.tsx` |
 
-New optional env vars (`.env.example`): `NEXT_PUBLIC_MARKETING_URL` (default `https://texels.vercel.app`) for "Back to site", and `NEXT_PUBLIC_SUPPORT_EMAIL` to show a Support link.
+New optional env vars (`.env.example`): `NEXT_PUBLIC_MARKETING_URL` (default `https://tryvero.vercel.app`) for "Back to site", and `NEXT_PUBLIC_SUPPORT_EMAIL` to show a Support link.
 
 ### What I already verified
 - `tsc` clean · `eslint` 0 errors · **Vitest 27/27** (5 new tests: intent whitelist, open-redirect protection) · `npm run build` passes.
@@ -329,11 +329,11 @@ Signed-in users following any of these skip sign-up and land straight on the act
 
 ### Steps for you
 1. Commit the small config changes (the three files above) and **push `main`**.
-2. **Vercel, marketing project** (the one serving `texels.vercel.app`):
+2. **Vercel, marketing project** (the one serving `tryvero.vercel.app`):
    Settings → Git → **Disconnect** `TeXel-Landing` → **Connect** `sehajmakkar/LaTex` → Settings → Build & Deployment → **Root Directory = `marketing`** → Save → Deployments → **Redeploy**.
-3. **Vercel, app project** (`hirex-omega.vercel.app`): check that Root Directory = `latex-ai-editor`. The new `ignoreCommand` comes from `vercel.json` automatically; if a "Ignored Build Step" is already set in the dashboard, clear it so the file's version applies.
+3. **Vercel, app project** (`vero-dashboard.vercel.app`): check that Root Directory = `latex-ai-editor`. The new `ignoreCommand` comes from `vercel.json` automatically; if a "Ignored Build Step" is already set in the dashboard, clear it so the file's version applies.
 4. **Railway:** after the push, check the service's Settings → **Watch Paths** shows `/latex-ai-editor/latex-service/**` (from `railway.toml`). If Railway kept an older dashboard value, set it there to the same.
-5. When `texels.vercel.app` deploys fine from the new repo: GitHub → `TeXel-Landing` → Settings → **Archive this repository**.
+5. When `tryvero.vercel.app` deploys fine from the new repo: GitHub → `TeXel-Landing` → Settings → **Archive this repository**.
 
 Local development from now on:
 ```bash
@@ -858,3 +858,63 @@ Then restart `npm run dev`.
 | 2 | | |
 | 3 | | |
 | 4 | | |
+
+---
+
+## Step: Phase 2, billing hardening (Dodo) (27 Sep 2026)
+
+### Why (what the audit found)
+- The webhook **granted Pro for any product** (unknown products defaulted to Pro).
+- It **never saved the Dodo customer id** (it read `customer_id`; Dodo sends `customer.customer_id`), so "Manage subscription" couldn't be built on it.
+- **No idempotency or ordering:** Dodo retries each event up to 8 times and may deliver out of order, so an old "expired" could downgrade a new subscription.
+- **No billing period stored,** no grace period for failed renewals, no "Pro until the end of what you paid for" after cancelling.
+- **Checkout could charge someone who is already Pro** a second time; there was no way to cancel or change the card.
+- **Real case:** the `seh…@gmail.com` test subscription **expired in Dodo in April 2026** but stayed "active" here. It now correctly counts as Free (see step 4 below to test again).
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Who is Pro | Decided on every request from status + period end: manual grants stay Pro; active; cancelled → until period end; failed renewal → 3-day grace; expired/failed → Free. All limits use it | `src/lib/billing/entitlements.ts`, `plans.ts` (`limitsForUser`), all limit checks |
+| Webhook | Verified signature + 5-min replay window; **one transaction per delivery** (idempotent by webhook-id, user row locked); only our product; older events ignored; old subscription can't downgrade a newer one; unmatched payments logged | `src/app/api/webhooks/dodo/route.ts`, `src/services/billing/webhook-service.ts` |
+| Checkout | Pro only; **409 if already Pro**; reuses the Dodo customer; rate-limited | `src/app/api/billing/checkout/route.ts` |
+| Portal | `POST /api/billing/portal` → Dodo customer portal (cancel/resume, card, invoices) | `src/app/api/billing/portal/route.ts` |
+| Billing page | Status line + **Manage subscription** / **Update payment method** | `src/app/(app)/billing/page.tsx`, `/api/billing/me` |
+| Data | `users.current_period_end`, `cancel_at_period_end`, `subscription_event_at`; `processed_webhooks` (**already applied**); backfilled the missing customer id/period end from Dodo | `schema.ts`, `drizzle/manual/2026-09-27-billing.sql` |
+
+### What I already verified (test mode only; no money moved)
+- **Unit tests 127/127** (13 new: every subscription state and every webhook safety rule).
+- **Signed webhooks end-to-end 12/12** (real signing secret, dev server, temporary account): bad signature and 10-min replay rejected; activation → Pro with customer id + period; retry = duplicate; unknown product ignored; late older event ignored; cancel → Pro until period end; failed renewal → grace; old subscription's expiry ignored; expired → Free; non-subscription events acknowledged; unknown account logged.
+- **Dodo test mode 7/7:** checkout link (test.checkout.dodopayments.com); Pro Plus rejected; portal 404 without a subscription and a portal link with one; returning customer reused; already-Pro → 409; billing state endpoint.
+- ESLint 0 errors, `npm run build`.
+
+### Setup (you)
+1. **Dodo dashboard (Test mode) → Developers → Webhooks:** make sure there's an endpoint for the app that receives your test events:
+   - Deployed: `https://vero-dashboard.vercel.app/api/webhooks/dodo`
+   - Local: run `cloudflared tunnel --url http://localhost:3000` and add `https://<tunnel>/api/webhooks/dodo`
+   - Events: all `subscription.*` (active, updated, renewed, on_hold, cancelled, expired, failed, plan_changed). `payment.*` is optional (acknowledged and ignored).
+2. Copy that endpoint's **signing secret** into `DODO_PAYMENTS_WEBHOOK_KEY` (local `.env` and Vercel). A wrong secret is the likely reason the April expiry was never received.
+3. Vercel env (Preview/Production): `DODO_PAYMENTS_API_KEY` (test key), `DODO_PAYMENTS_ENVIRONMENT=test_mode`, `DODO_PRODUCT_ID_PRO`, `DODO_PAYMENTS_WEBHOOK_KEY`, `NEXT_PUBLIC_APP_URL` (the deployed URL, for the return link). Redeploy.
+
+### Test checklist (browser, test mode)
+Test cards: success `4242 4242 4242 4242`, exp `06/32`, CVC `123`. Renewal failure: `4000 0000 0000 0341`, exp `12/34`.
+
+| # | Check | Expected |
+|---|---|---|
+| 1 | `/billing` on your `seh…` account | Free (the old subscription expired in April) |
+| 2 | **Upgrade to Pro** → pay with 4242… | Back on `/billing/success`: "You're on Pro" within seconds; sidebar shows Pro |
+| 3 | `/billing` | "Renews on <date>" + **Manage subscription** |
+| 4 | Click **Upgrade** again (e.g. from the dashboard) | "You're already on Pro." (no second charge) |
+| 5 | **Manage subscription** → cancel in the Dodo portal → back to `/billing` | "Cancelled. You keep Pro until <date>; you won't be charged again." Still Pro |
+| 6 | Dodo dashboard → Webhooks → the endpoint's log | Every delivery 200; replaying one shows `"outcome":"duplicate"` |
+| 7 | (Optional) portal → change card to 4000…0341, then in Dodo test mode trigger a renewal | "Your last payment didn't go through…" + **Update payment method**; Pro for 3 more days |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |

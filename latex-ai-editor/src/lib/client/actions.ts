@@ -54,6 +54,15 @@ export async function createProjectFromTemplate(templateId: string, ownerName?: 
   });
 }
 
+/** Opens Dodo's customer portal (cancel, card, invoices). */
+export async function openBillingPortal(): Promise<void> {
+  const res = await fetch("/api/billing/portal", { method: "POST" });
+  if (!res.ok) await readError(res, "Couldn't open the billing portal");
+  const url = (await res.json()).data?.url as string | undefined;
+  if (!url) throw new Error("Couldn't open the billing portal");
+  window.location.href = url;
+}
+
 /** Starts Dodo checkout for Pro and navigates to it. */
 export async function startProCheckout(): Promise<void> {
   const res = await fetch("/api/billing/checkout", {

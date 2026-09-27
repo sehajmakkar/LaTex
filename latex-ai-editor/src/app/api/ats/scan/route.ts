@@ -12,7 +12,7 @@ import { extractDocx, extractPdf, extractTxt, type Extraction } from "@/services
 import { buildAtsReport } from "@/services/ats/pipeline";
 import { isR2Enabled, uploadResumeObject } from "@/services/storage/r2";
 import { isGeminiConfigured } from "@/lib/gemini";
-import { getPlanLimits, usagePeriod } from "@/lib/plans";
+import { usagePeriod, limitsForUser } from "@/lib/plans";
 import { allowRequest } from "@/lib/rate-limit";
 import { AppError } from "@/lib/errors";
 
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
       const clerkUser = await currentUser();
       user = await userService.ensureUser(userId, clerkUser?.emailAddresses?.[0]?.emailAddress ?? "", clerkUser?.fullName ?? null);
     }
-    const limits = getPlanLimits(user.plan);
+    const limits = limitsForUser(user);
     const { today, monthStart } = usagePeriod();
     const used = await userUsageRepository.sumAtsScansSince(userId, monthStart);
     const useAi = isGeminiConfigured() && extraction.layout.hasTextLayer && used < limits.atsAiReviewsPerMonth;

@@ -1,17 +1,35 @@
-import { pgTable, uuid, text, timestamp, integer, date } from "drizzle-orm/pg-core";
+import { boolean, pgTable, uuid, text, timestamp, integer, date } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
   name: text("name"),
   plan: text("plan").notNull().default("free"),
+  /** Deprecated (Stripe was replaced by Dodo). Empty in every row; drop in the Phase 6 baseline migration. */
   stripeCustomerId: text("stripe_customer_id"),
+  /** Deprecated, see stripeCustomerId. */
   stripeSubscriptionId: text("stripe_subscription_id"),
   dodoCustomerId: text("dodo_customer_id"),
   dodoSubscriptionId: text("dodo_subscription_id"),
+  /** Dodo's subscription status: pending | active | on_hold | cancelled | failed | expired. */
   subscriptionStatus: text("subscription_status"),
+  /** End of the paid period (Dodo's next_billing_date). Pro lasts until then after a cancellation. */
+  currentPeriodEnd: timestamp("current_period_end"),
+  /** The customer cancelled; the subscription ends at currentPeriodEnd instead of renewing. */
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  /** Timestamp of the last webhook event applied, so older events arriving late are ignored. */
+  subscriptionEventAt: timestamp("subscription_event_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+/** Webhook deliveries already applied (Dodo retries each event up to 8 times). */
+export const processedWebhooks = pgTable("processed_webhooks", {
+  webhookId: text("webhook_id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  /** What we did with it: applied | ignored:<reason>. */
+  outcome: text("outcome").notNull(),
+  receivedAt: timestamp("received_at").notNull().defaultNow(),
 });
 
 export const projects = pgTable("projects", {

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { aiService } from "@/services/ai-service";
 import { isGeminiConfigured } from "@/lib/gemini";
 import { AppError, UsageLimitError } from "@/lib/errors";
-import { getPlanLimits, usagePeriod } from "@/lib/plans";
+import { getPlanLimits, usagePeriod, limitsForUser } from "@/lib/plans";
 import { allowRequest } from "@/lib/rate-limit";
 import { MAX_CONTENT_SIZE } from "@/lib/constants";
 import { userRepository } from "@/repositories/user-repository";
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       clerkUser?.fullName ?? null
     );
   }
-  const limits = getPlanLimits(user?.plan);
+  const limits = limitsForUser(user);
   const { today, monthStart } = usagePeriod();
 
   if (!allowRequest(`ai-edit:${userId}`, limits.aiEditsPerMinute)) {

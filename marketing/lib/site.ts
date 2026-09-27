@@ -4,10 +4,10 @@
  */
 
 /** The dashboard app. Override per environment with NEXT_PUBLIC_APP_URL. */
-export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://hirex-omega.vercel.app").replace(/\/$/, "")
+export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://vero-dashboard.vercel.app").replace(/\/$/, "")
 
 /** This site's public URL, used for canonical links, sitemap and share images. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://texels.vercel.app").replace(/\/$/, "")
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://tryvero.vercel.app").replace(/\/$/, "")
 
 /** Optional contact address (footer "Contact" link). */
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || ""

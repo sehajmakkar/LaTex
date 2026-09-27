@@ -1,3 +1,4 @@
+import { effectivePlan, type BillingFields } from "@/lib/billing/entitlements";
 /**
  * Single source of truth for plan limits (VERO_REVIVAL_PLAN.md §7). Server
  * routes enforce these; the pricing page should read them too (Phase 2).
@@ -42,4 +43,9 @@ export function getPlanLimits(plan: string | null | undefined): PlanLimits & { i
 export function usagePeriod(now = new Date()) {
   const today = now.toISOString().slice(0, 10);
   return { today, monthStart: `${today.slice(0, 7)}-01` };
+}
+
+/** Limits for a user, from their effective plan (a lapsed or cancelled subscription counts as Free). */
+export function limitsForUser(user: BillingFields | null | undefined): PlanLimits & { id: PlanId } {
+  return getPlanLimits(effectivePlan(user));
 }

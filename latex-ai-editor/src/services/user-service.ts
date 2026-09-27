@@ -1,3 +1,4 @@
+import { effectivePlan } from "@/lib/billing/entitlements";
 import { userRepository } from "@/repositories/user-repository";
 import { NotFoundError } from "@/lib/errors";
 import { FREE_PROJECT_LIMIT } from "@/lib/constants";
@@ -26,7 +27,7 @@ class UserService {
 
   async canCreateProject(userId: string): Promise<boolean> {
     const user = await userRepository.findByClerkId(userId);
-    const plan = user?.plan ?? "free";
+    const plan = effectivePlan(user);
     if (plan !== "free") {
       return true;
     }

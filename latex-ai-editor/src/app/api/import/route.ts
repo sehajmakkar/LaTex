@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { AppError, UsageLimitError } from "@/lib/errors";
 import { isGeminiConfigured } from "@/lib/gemini";
-import { getPlanLimits, usagePeriod } from "@/lib/plans";
+import { getPlanLimits, usagePeriod, limitsForUser } from "@/lib/plans";
 import { allowRequest } from "@/lib/rate-limit";
 import { userRepository } from "@/repositories/user-repository";
 import { userUsageRepository } from "@/repositories/user-usage-repository";
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       const clerkUser = await currentUser();
       user = await userService.ensureUser(userId, clerkUser?.emailAddresses?.[0]?.emailAddress ?? "", clerkUser?.fullName ?? null);
     }
-    const limits = getPlanLimits(user?.plan);
+    const limits = limitsForUser(user);
     if (!(await userService.canCreateProject(userId))) {
       return error(
         "PROJECT_LIMIT_REACHED",

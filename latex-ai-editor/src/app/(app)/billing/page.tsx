@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Check, Loader2, Minus, Sparkles } from "lucide-react";
@@ -8,11 +9,35 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Page, PageHeader } from "@/components/shell/Page";
 import { PLANS } from "@/lib/plans";
-import { startProCheckout } from "@/lib/client/actions";
+import { openBillingPortal, startProCheckout } from "@/lib/client/actions";
 import { useUsage } from "@/hooks/use-usage";
 import { cn } from "@/lib/utils";
 
 const PRO_PRICE = "$5.99";
+
+type BillingMe = {
+  plan: "free" | "pro";
+  reason: "free" | "ended" | "manual" | "active" | "cancelling" | "payment_issue";
+  until: string | null;
+  canManage: boolean;
+};
+
+const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : null);
+
+function statusLine(b: BillingMe): { text: string; tone: "ok" | "warn" } {
+  switch (b.reason) {
+    case "active":
+      return { text: b.until ? `Renews on ${fmt(b.until)}.` : "Active.", tone: "ok" };
+    case "cancelling":
+      return { text: `Cancelled. You keep Pro until ${fmt(b.until)}; you won't be charged again.`, tone: "warn" };
+    case "payment_issue":
+      return { text: `Your last payment didn't go through. Update your card by ${fmt(b.until)} to keep Pro.`, tone: "warn" };
+    case "manual":
+      return { text: "Pro is enabled on your account.", tone: "ok" };
+    default:
+      return { text: "", tone: "ok" };
+  }
+}
 
 type Row = { label: string; free: string | boolean; pro: string | boolean };
 
@@ -57,7 +82,26 @@ function Cell({ value }: { value: string | boolean }) {
 export default function BillingPage() {
   const { data, isLoading } = useUsage();
   const [checkingOut, setCheckingOut] = useState(false);
-  const isPro = data?.plan === "pro";
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const { data: billing } = useQuery({
+    queryKey: ["billing-me"],
+    queryFn: async (): Promise<BillingMe> => {
+      const res = await fetch("/api/billing/me");
+      if (!res.ok) throw new Error("Failed to load billing");
+      return (await res.json()).data;
+    },
+  });
+  const isPro = (billing?.plan ?? data?.plan) === "pro";
+
+  const manage = async () => {
+    setOpeningPortal(true);
+    try {
+      await openBillingPortal();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't open the billing portal");
+      setOpeningPortal(false);
+    }
+  };
 
   const upgrade = async () => {
     setCheckingOut(true);
@@ -123,9 +167,22 @@ export default function BillingPage() {
           {isLoading ? (
             <Skeleton className="mt-6 h-9 rounded-full" />
           ) : isPro ? (
-            <p className="mt-6 text-sm text-muted-foreground">
-              Status: {data?.subscriptionStatus ?? "active"}. Subscription management (cancel, change card) is coming next.
-            </p>
+            <div className="mt-6 space-y-3">
+              {billing && statusLine(billing).text && (
+                <p className={cn("text-sm", statusLine(billing).tone === "warn" ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground")}>
+                  {statusLine(billing).text}
+                </p>
+              )}
+              {billing?.canManage && (
+                <Button variant="outline" className="w-full" onClick={manage} disabled={openingPortal}>
+                  {openingPortal && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {billing.reason === "payment_issue" ? "Update payment method" : "Manage subscription"}
+                </Button>
+              )}
+              {billing?.canManage && (
+                <p className="text-xs text-muted-foreground">Cancel, resume, change your card and download invoices in the secure Dodo portal.</p>
+              )}
+            </div>
           ) : (
             <Button className="mt-6" onClick={upgrade} disabled={checkingOut}>
               {checkingOut && <Loader2 className="h-4 w-4 animate-spin" />}

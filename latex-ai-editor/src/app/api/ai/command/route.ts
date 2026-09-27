@@ -5,7 +5,7 @@ import { aiService } from "@/services/ai-service";
 import { COMMAND_DOC_LIMIT } from "@/services/ai/command-prompt";
 import { isGeminiConfigured } from "@/lib/gemini";
 import { AppError, UsageLimitError } from "@/lib/errors";
-import { getPlanLimits, usagePeriod } from "@/lib/plans";
+import { getPlanLimits, usagePeriod, limitsForUser } from "@/lib/plans";
 import { allowRequest } from "@/lib/rate-limit";
 import { userRepository } from "@/repositories/user-repository";
 import { userUsageRepository } from "@/repositories/user-usage-repository";
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       const clerkUser = await currentUser();
       user = await userService.ensureUser(userId, clerkUser?.emailAddresses?.[0]?.emailAddress ?? "", clerkUser?.fullName ?? null);
     }
-    const limits = getPlanLimits(user.plan);
+    const limits = limitsForUser(user);
     const { today, monthStart } = usagePeriod();
     if (!allowRequest(`ai-command:${userId}`, limits.aiCommandsPerMinute)) {
       throw new UsageLimitError("Too many AI commands in a minute. Wait a moment and try again.", { kind: "burst" });

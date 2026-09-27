@@ -4,7 +4,7 @@
 
 *Supersedes the open items in* `improvement-scope.md`*,* `.cursor/plans/`*, and the "Current status" sections of* `deployment-plan.md`**.*
 
-Vero (currently branded "TeXel") is the **dashboard app**. The marketing site at [https://texels.vercel.app](https://texels.vercel.app) is a separate deploy that should send users here.
+Vero (currently branded "TeXel") is the **dashboard app**. The marketing site at [https://tryvero.vercel.app](https://tryvero.vercel.app) is a separate deploy that should send users here.
 
 ---
 
@@ -24,7 +24,7 @@ Vero (currently branded "TeXel") is the **dashboard app**. The marketing site at
 | Gemini API key               | ✅ Valid                        | `gemini-3.6-flash` works for normal and streamed calls (~2–6 s; ~110 "thinking" tokens per call)                                                                                                                                                    |
 | **Inline AI edit (⌘K)**      | ❌ **Broken, root cause found** | The code hard-codes `gemini-2.5-flash`, and Google now returns *404 "no longer available to new users"* for it. `GEMINI_MODEL` in `.env` is never read. ATS's AI review fails for the same reason. The client then **hides** the error (see bug #9) |
 | Local LaTeX (MacTeX)         | ✅ Installed                    | Without `LATEX_SERVICE_URL`, `/api/compile` falls back to local `pdflatex`                                                                                                                                                                          |
-| **Landing page → app links** | ❌ **Missing**                  | Every CTA on texels.vercel.app points to `#`                                                                                                                                                                                                        |
+| **Landing page → app links** | ❌ **Missing**                  | Every CTA on tryvero.vercel.app points to `#`                                                                                                                                                                                                        |
 
 
 
@@ -338,14 +338,21 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 5. Check that `users.plan = 'pro'` in Neon, that `/billing/success` shows the new plan, and that Pro limits apply.
 6. From the Dodo dashboard, test cancel, payment failure/on-hold, and renewal.
 
-**2.2 Fixes**
+**2.2 Fixes** ✅ *Implemented 27 Sep 2026 (code); the real test-card run (2.1) is yours, steps in `replenish-guide.md`.*
 
-- [ ] Webhook: unknown `product_id` → log and ignore (don't default to `"pro"`). Handle `on_hold` as a downgrade after a grace period. Store `current_period_end`.
-- [ ] Order events by timestamp and store the last processed webhook-id (idempotency).
-- [ ] **Manage subscription** button: Dodo customer portal session → cancel, update card, invoices.
-- [ ] `/billing/success`: poll `/api/billing/me` until the plan changes, because the webhook may arrive after the redirect.
+Found in the audit: the webhook granted Pro for **any** product; never saved the Dodo customer id (read `customer_id`, Dodo sends `customer.customer_id`), so the portal couldn't work; had no idempotency or ordering; stored no period end; checkout could open a **second subscription** for someone already Pro. One existing subscription had **expired in Dodo in April 2026** but stayed "active" here (missed webhook); with the period end now stored it correctly counts as Free.
+
+- [x] **Entitlements** (`src/lib/billing/entitlements.ts`): Pro is decided on every request from status + period end (manual grants stay Pro; active; cancelled → until period end; on_hold → 3-day grace; expired/failed/pending → Free), so a lapse without a final webhook still ends on time. Every limit check uses it (`limitsForUser`).
+- [x] **Webhook** (`services/billing/webhook-service.ts`): signature + 5-min replay window; one transaction per delivery (idempotent by webhook-id, user row locked); only our product ids; older events ignored; an old subscription ending can't downgrade a newer one; unmatched payments logged for follow-up; DB errors → 500 so Dodo retries.
+- [x] **Checkout**: Pro only; refuses if already Pro (409); reuses the Dodo customer; rate-limited. **Portal**: `/api/billing/portal`. **Billing page**: status ("Renews on…", "Cancelled, Pro until…", "Payment failed, update card by…") + Manage subscription.
+- [x] Data: `users.current_period_end`, `cancel_at_period_end`, `subscription_event_at`, table `processed_webhooks` (applied: `drizzle/manual/2026-09-27-billing.sql`); backfilled the missing customer id / period end from Dodo (NULLs only).
+
+- [x] Webhook: unknown `product_id` → log and ignore (don't default to `"pro"`). Handle `on_hold` as a downgrade after a grace period. Store `current_period_end`. *Done 27 Sep (on_hold: 3-day grace; cancelled: Pro until period end; `current_period_end` stored).*
+- [x] Order events by timestamp and store the last processed webhook-id (idempotency). *Done 27 Sep (`processed_webhooks` + transaction + row lock; older events ignored per subscription).*
+- [x] **Manage subscription** button: Dodo customer portal session → cancel, update card, invoices. *Done 27 Sep (`/api/billing/portal`, Dodo customer portal).*
+- [x] `/billing/success`: poll `/api/billing/me` until the plan changes, because the webhook may arrive after the redirect. *Already polling `/api/usage` (now the effective plan).*
 - [ ] One source of truth for entitlements: `src/lib/plans.ts` *(created in 1.4 with the AI-edit limits; add projects/compiles/ATS/command-bar limits and point the pricing page at it)* with limits per plan (projects, compiles/day, AI edits/day, AI commands/day, ATS scans/day, features). Server routes and the pricing UI both read it.
-- [ ] Remove the Stripe columns (migration). Remove `pro_plus` from code (`billing-config.ts`, `dodo.ts`, checkout schema, billing page) and change the pricing page to Free vs Pro $5.99.
+- [ ] Remove the Stripe columns (migration). Remove `pro_plus` from code (`billing-config.ts`, `dodo.ts`, checkout schema, billing page) and change the pricing page to Free vs Pro $5.99. *pro_plus: removed from checkout/UI; kept only as legacy mapping (old subscriptions = Pro). Stripe columns: confirmed empty in every row; drop in the Phase 6 baseline migration (needs your OK).*
 
 **Done when:** upgrade, renew, cancel, and fail all update `users.plan` correctly in test mode, and a Pro user sees Pro limits everywhere.
 
@@ -406,7 +413,7 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 
 **Rework, round 1 ✅ (26 Sep 2026)** (existing design kept as is; a first attempt with a redesign was reverted at your request)
 - [x] Rebrand TeXel → **Vero** (navbar, footer, metadata, pricing, testimonial and CTA copy).
-- [x] **Every button goes to its place in the dashboard**, login first and then the intended page (from `marketing/lib/site.ts`, `NEXT_PUBLIC_APP_URL`, default `https://hirex-omega.vercel.app`):
+- [x] **Every button goes to its place in the dashboard**, login first and then the intended page (from `marketing/lib/site.ts`, `NEXT_PUBLIC_APP_URL`, default `https://vero-dashboard.vercel.app`):
   - Get Started / Start Writing Free → `/sign-up?intent=start` (Resumes).
   - ATS buttons (features card, new ATS section, footer) → `/sign-up?intent=ats` (ATS page after login).
   - Upgrade to Pro → `/sign-up?intent=pro` (straight to Dodo checkout after login).

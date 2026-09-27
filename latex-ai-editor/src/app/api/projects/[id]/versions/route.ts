@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { MAX_CONTENT_SIZE } from "@/lib/constants";
-import { getPlanLimits } from "@/lib/plans";
+import { limitsForUser } from "@/lib/plans";
 import { projectService } from "@/services/project-service";
 import { userRepository } from "@/repositories/user-repository";
 import { projectVersionRepository } from "@/repositories/project-version-repository";
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!(await ownProject(id, userId))) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Resume not found" } }, { status: 404 });
   const body = Body.safeParse(await req.json().catch(() => null));
   if (!body.success) return NextResponse.json({ error: { code: "VALIDATION_ERROR", message: "Invalid version" } }, { status: 400 });
-  const keep = getPlanLimits((await userRepository.findByClerkId(userId))?.plan).versionsKept;
+  const keep = limitsForUser(await userRepository.findByClerkId(userId)).versionsKept;
   const row = await projectVersionRepository.create({ projectId: id, userId, ...body.data }, keep);
   return NextResponse.json({ data: { id: row.id, label: row.label, createdAt: row.createdAt } }, { status: 201 });
 }

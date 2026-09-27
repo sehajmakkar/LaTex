@@ -4,7 +4,7 @@ import { z } from "zod";
 import { MAX_CONTENT_SIZE } from "@/lib/constants";
 import { compileSmart } from "@/services/compile/smart-compile";
 import { toEngine } from "@/lib/latex-engine";
-import { getPlanLimits, usagePeriod } from "@/lib/plans";
+import { usagePeriod, limitsForUser } from "@/lib/plans";
 import { allowRequest } from "@/lib/rate-limit";
 import { userRepository } from "@/repositories/user-repository";
 import { userUsageRepository } from "@/repositories/user-usage-repository";
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   if (UUID.test(projectId) && (!project || project.userId !== userId)) return errorJson("NOT_FOUND", "Resume not found.", 404);
 
   // Limits: a per-minute guard against scripts, and a monthly cap (Pro: fair use).
-  const limits = getPlanLimits(user?.plan);
+  const limits = limitsForUser(user);
   if (!allowRequest(`compile:${userId}`, limits.compilesPerMinute)) {
     return errorJson("USAGE_LIMIT_REACHED", "You're compiling very quickly. Wait a few seconds and try again.", 429);
   }

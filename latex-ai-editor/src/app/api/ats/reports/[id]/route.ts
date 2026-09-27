@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { atsRepository } from "@/repositories/ats-repository";
 import { userRepository } from "@/repositories/user-repository";
-import { getPlanLimits } from "@/lib/plans";
+import { limitsForUser } from "@/lib/plans";
 import { redactForPlan } from "@/services/ats/redact";
 import type { AtsReportV2 } from "@/services/ats/types";
 
@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     }
 
     const stored = JSON.parse(row.report) as Partial<AtsReportV2>;
-    const plan = getPlanLimits((await userRepository.findByClerkId(userId))?.plan).id;
+    const plan = limitsForUser(await userRepository.findByClerkId(userId)).id;
     // Reports from before the v2 engine can't be shown in the new layout.
     const report = stored.version === 2 ? redactForPlan(stored as AtsReportV2, plan) : null;
 

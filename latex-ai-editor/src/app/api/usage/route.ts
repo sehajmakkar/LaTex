@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getPlanLimits, usagePeriod } from "@/lib/plans";
+import { usagePeriod, limitsForUser } from "@/lib/plans";
 import { userRepository } from "@/repositories/user-repository";
 import { userUsageRepository } from "@/repositories/user-usage-repository";
 
@@ -15,7 +15,7 @@ export async function GET() {
   }
   try {
     const user = await userRepository.findByClerkId(userId);
-    const limits = getPlanLimits(user?.plan);
+    const limits = limitsForUser(user);
     const { monthStart } = usagePeriod();
     const [projects, aiEdits, atsAiReviews, aiCommands, aiImports, compiles] = await Promise.all([
       userRepository.countProjectsByUserId(userId),

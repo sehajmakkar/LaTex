@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { effectivePlan } from "@/lib/billing/entitlements";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { projectService } from "@/services/project-service";
@@ -29,7 +30,7 @@ export async function GET() {
     return NextResponse.json({
       // The dashboard shows the resume's own thumbnail, or its template's preview until the first compile.
       data: projects.map((p) => ({ ...p, templatePreview: getTemplatePreview(p.templateId) })),
-      plan: user?.plan ?? "free",
+      plan: effectivePlan(user),
     });
   } catch (error) {
     console.error("Error fetching projects:", error);
