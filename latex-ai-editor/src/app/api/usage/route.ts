@@ -17,19 +17,20 @@ export async function GET() {
     const user = await userRepository.findByClerkId(userId);
     const limits = getPlanLimits(user?.plan);
     const { monthStart } = usagePeriod();
-    const [projects, aiEdits, atsAiReviews, aiCommands, aiImports] = await Promise.all([
+    const [projects, aiEdits, atsAiReviews, aiCommands, aiImports, compiles] = await Promise.all([
       userRepository.countProjectsByUserId(userId),
       userUsageRepository.sumAiEditsSince(userId, monthStart),
       userUsageRepository.sumAtsScansSince(userId, monthStart),
       userUsageRepository.sumAiCommandsSince(userId, monthStart),
       userUsageRepository.sumAiImportsSince(userId, monthStart),
+      userUsageRepository.sumCompilesSince(userId, monthStart),
     ]);
     return NextResponse.json({
       data: {
         plan: limits.id,
         subscriptionStatus: user?.subscriptionStatus ?? null,
-        limits: { projects: limits.projects, aiEditsPerMonth: limits.aiEditsPerMonth, atsAiReviewsPerMonth: limits.atsAiReviewsPerMonth, aiCommandsPerMonth: limits.aiCommandsPerMonth, aiImportsPerMonth: limits.aiImportsPerMonth },
-        usage: { projects, aiEdits, atsAiReviews, aiCommands, aiImports },
+        limits: { projects: limits.projects, aiEditsPerMonth: limits.aiEditsPerMonth, atsAiReviewsPerMonth: limits.atsAiReviewsPerMonth, aiCommandsPerMonth: limits.aiCommandsPerMonth, aiImportsPerMonth: limits.aiImportsPerMonth, compilesPerMonth: limits.compilesPerMonth },
+        usage: { projects, aiEdits, atsAiReviews, aiCommands, aiImports, compiles },
       },
     });
   } catch (error) {

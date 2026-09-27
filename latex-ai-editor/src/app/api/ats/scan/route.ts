@@ -110,6 +110,8 @@ export async function POST(req: NextRequest) {
       const compiled = await compileSmart(project.content, {
         forced: toEngine(project.compiler),
         lastGood: toEngine(project.lastEngine),
+        // The AI review still needs most of the route's 60 s.
+        budgetMs: 20_000,
       });
       if (!compiled.ok) {
         return compiled.code === "COMPILE_ERROR"

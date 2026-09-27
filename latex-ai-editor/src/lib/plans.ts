@@ -20,13 +20,16 @@ export type PlanLimits = {
   /** AI imports of a PDF/DOCX/text resume (LaTeX imports are free). */
   aiImportsPerMonth: number;
   aiCommandsPerMinute: number;
+  /** Compiles (every Compile click / AI change recompile). Pro is "unlimited" within fair use. */
+  compilesPerMonth: number;
+  compilesPerMinute: number;
   /** Version snapshots kept per resume. */
   versionsKept: number;
 };
 
 export const PLANS: Record<PlanId, PlanLimits> = {
-  free: { projects: FREE_PROJECT_LIMIT, aiEditsPerMonth: 40, aiEditsPerMinute: 10, atsAiReviewsPerMonth: 5, aiCommandsPerMonth: 10, aiCommandsPerMinute: 6, versionsKept: 3, aiImportsPerMonth: 5 },
-  pro: { projects: 100, aiEditsPerMonth: 1000, aiEditsPerMinute: 20, atsAiReviewsPerMonth: 60, aiCommandsPerMonth: 120, aiCommandsPerMinute: 10, versionsKept: 100, aiImportsPerMonth: 50 },
+  free: { projects: FREE_PROJECT_LIMIT, aiEditsPerMonth: 40, aiEditsPerMinute: 10, atsAiReviewsPerMonth: 5, aiCommandsPerMonth: 10, aiCommandsPerMinute: 6, versionsKept: 3, aiImportsPerMonth: 5, compilesPerMonth: 300, compilesPerMinute: 20 },
+  pro: { projects: 100, aiEditsPerMonth: 1000, aiEditsPerMinute: 20, atsAiReviewsPerMonth: 60, aiCommandsPerMonth: 120, aiCommandsPerMinute: 10, versionsKept: 100, aiImportsPerMonth: 50, compilesPerMonth: 5000, compilesPerMinute: 30 },
 };
 
 /** Maps the stored plan string (including legacy "pro_plus") to limits. */

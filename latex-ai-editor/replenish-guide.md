@@ -813,3 +813,48 @@ Then restart `npm run dev`.
 | 5 | | |
 | 6 | | |
 | 7 | | |
+
+---
+
+## Step: Phase 1.2, API hardening (27 Sep 2026)
+
+### Why
+- **Compile had no limits.** The middleware blocked signed-out callers (with the wrong response), but any signed-in account, like a free Google sign-up, could compile without limit. Each compile uses our Railway service (one compile at a time on the free plan), so one script could make everyone else wait or see "busy", and costs grow with abuse.
+- **Signed-out API calls got HTML.** The middleware answered with the 404 page (and a 500 for file uploads), so the app showed confusing errors instead of "please sign in".
+- **Busy and cold-start moments failed hard** with "LaTeX service request failed", no retry.
+- **Timeouts didn't fit Vercel.** The app waited up to 75 s for a compile, but Vercel stops routes at 60 s, so a slow compile ended in Vercel's generic error page.
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Middleware | Signed-out `/api/*` → JSON `401 {code: "UNAUTHORIZED"}`; pages still redirect to sign-in; public: templates, webhooks | `src/middleware.ts` |
+| `/api/compile` | Requires sign-in in the route too; someone else's resume → 404; limits: **20/min (Pro 30)**, **300/month free (Pro 5,000 fair use)**, counted in `user_usage.compiles` | `src/app/api/compile/route.ts`, `plans.ts`, `user-usage-repository.ts` |
+| Compile client | One automatic retry when busy (waits for Retry-After, max 5 s) or waking up/unreachable (2 s); friendly messages; too-large → clear error; service timeout reported as a timeout | `src/services/compile-service.ts` |
+| Deadlines | One deadline for all engine attempts + retries (52 s; ATS 20 s; import: what the AI left); the service is told the time left and counts queue wait | `smart-compile.ts`, `latex-service/server.js`, ATS + import routes |
+| Editor | Limit reached → **Upgrade**; expired session → **Sign in** (your work is saved) | project page |
+| Billing | "Compiles: 300/month vs Unlimited (fair use)" in the comparison; `/api/usage` includes compiles | billing page, usage API/hook |
+
+### What I already verified
+- Signed-out: every private API → JSON 401 (including the multipart upload that returned 500); templates API still public; pages still redirect.
+- **Unit tests 114/114** (9 new: retry on busy / unreachable, no retry on LaTeX errors or without time, too-large, timeouts, time limit sent to the service).
+- **End-to-end 7/7** (dev server, temporary users, deleted afterwards): own resume compiles and is counted; another user's resume 404; bad/empty body 400; monthly limit 429 with Upgrade; a signed-in compile without a project still works.
+- ESLint 0 errors, `npm run build`.
+
+### Setup (you)
+`railway up` from `latex-service/` (with the Phase 5f changes): the service now honours per-request time limits. Everything else works before that.
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | Sign out in another tab, then press Compile in the editor | Toast "Your session expired" with **Sign in** |
+| 2 | Compile normally | Works; `/billing` shows Compiles 300/month (free) |
+| 3 | Click Compile very fast ~20 times | "You're compiling very quickly…" |
+| 4 | (Optional) set `compiles = 300` for your row in `user_usage` → Compile | "You've used all 300 free compiles" + **Upgrade** |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |

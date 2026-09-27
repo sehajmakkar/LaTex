@@ -152,7 +152,17 @@ export default function ProjectPage({ params }: ProjectPageProps) {
           setCompileLog(log ?? null);
           const message = body?.error?.message || "Compilation failed";
           setCompileState({ status: "error", message });
-          toast.error(message, { id: toastId, description: firstError });
+          const action =
+            response.status === 401
+              ? { label: "Sign in", onClick: () => window.location.assign(`/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`) }
+              : body?.error?.code === "USAGE_LIMIT_REACHED" && /upgrade/i.test(message)
+                ? { label: "Upgrade", onClick: () => router.push("/billing") }
+                : undefined;
+          toast.error(response.status === 401 ? "Your session expired" : message, {
+            id: toastId,
+            description: response.status === 401 ? "Sign in again to keep compiling. Your work is saved." : firstError,
+            action,
+          });
           return { ok: false, log, errors: -1 };
         }
         const data = body.data as { pdfUrl: string; log: string; engine: LatexEngine; errors: { line: number | null; message: string }[]; switchedFrom: LatexEngine | null };
@@ -185,7 +195,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         return { ok: false, errors: -1 };
       }
     },
-    [id, content, setCompileState, setPdfUrl, setActiveTab, saveContent]
+    [id, content, router, setCompileState, setPdfUrl, setActiveTab, saveContent]
   );
 
   const handleCompilerChange = useCallback(

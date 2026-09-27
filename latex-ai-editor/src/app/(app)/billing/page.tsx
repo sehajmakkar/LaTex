@@ -19,6 +19,7 @@ type Row = { label: string; free: string | boolean; pro: string | boolean };
 const ROWS: Row[] = [
   { label: "Resumes", free: `${PLANS.free.projects}`, pro: "Unlimited" },
   { label: "LaTeX editor, live PDF, all templates", free: true, pro: true },
+  { label: "Compiles", free: `${PLANS.free.compilesPerMonth} / month`, pro: "Unlimited (fair use)" },
   { label: "Inline AI edits (⌘K)", free: `${PLANS.free.aiEditsPerMonth} / month`, pro: `${PLANS.pro.aiEditsPerMonth.toLocaleString()} / month` },
   { label: "ATS check", free: true, pro: true },
   { label: "PDF download", free: true, pro: true },

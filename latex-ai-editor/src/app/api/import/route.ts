@@ -35,6 +35,7 @@ const titleFrom = (fileName: string) =>
  *   into the Jake's Resume layout, and checked line by line against the file.
  */
 export async function POST(req: NextRequest) {
+  const requestStart = Date.now();
   const { userId } = await auth();
   if (!userId) return error("UNAUTHORIZED", "Sign in to import a resume.", 401);
 
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
         throw e;
       }
       // Overleaf keeps the compiler in project settings, not the source: find the engine that works.
-      const probe = await compileSmart(result.content, { thumbnail: true });
+      const probe = await compileSmart(result.content, { thumbnail: true, budgetMs: 45_000 });
       const project = await projectService.createForUser(userId, {
         name: titleFrom(fileName),
         content: result.content,
@@ -168,7 +169,8 @@ export async function POST(req: NextRequest) {
       content = `% CHECK THESE: they weren't found word-for-word in your file.\n${list.join("\n")}\n${content}`;
     }
     // The renderer escapes everything, so this should always compile; check anyway.
-    const compiled = await compileSmart(content, { thumbnail: true });
+    // Whatever the AI left of the route's 60 s (at least 10 s; the renderer's LaTeX compiles fast).
+    const compiled = await compileSmart(content, { thumbnail: true, budgetMs: Math.max(10_000, 57_000 - (Date.now() - requestStart)) });
     const project = await projectService.createForUser(userId, {
       name: result.data.name.trim() ? `${result.data.name.trim().slice(0, 60)} (imported)` : titleFrom(fileName),
       content,

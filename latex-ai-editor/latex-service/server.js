@@ -133,7 +133,7 @@ function tail(text, maxBytes) {
  * that caps file size and CPU time. It gets its own process group so the
  * timeout kills latexmk and every engine it started.
  */
-function runLatexmk(workDir, engine, uid, stopOnFirstError) {
+function runLatexmk(workDir, engine, uid, stopOnFirstError, timeoutMs = COMPILE_TIMEOUT_MS) {
   return new Promise((resolve) => {
     const args = [
       "-norc",
@@ -147,7 +147,7 @@ function runLatexmk(workDir, engine, uid, stopOnFirstError) {
       "-silent",
       "main.tex",
     ];
-    const cpuSeconds = Math.ceil(COMPILE_TIMEOUT_MS / 1000) + 5;
+    const cpuSeconds = Math.ceil(timeoutMs / 1000) + 5;
     const proc = spawn(
       "/bin/sh",
       ["-c", `ulimit -f ${MAX_FILE_KB}; ulimit -t ${cpuSeconds}; exec latexmk "$@"`, "sh", ...args],
@@ -175,7 +175,7 @@ function runLatexmk(workDir, engine, uid, stopOnFirstError) {
       } catch {
         /* already exited */
       }
-    }, COMPILE_TIMEOUT_MS);
+    }, timeoutMs);
 
     proc.on("close", (code, signal) => {
       clearTimeout(timer);
@@ -244,7 +244,7 @@ async function hitFileLimit(workDir) {
   return false;
 }
 
-async function compile(content, engine, slot, wantThumbnail = false, stopOnFirstError = false) {
+async function compile(content, engine, slot, wantThumbnail = false, stopOnFirstError = false, timeoutMs = COMPILE_TIMEOUT_MS) {
   const workDir = await mkdtemp(path.join(WORK_ROOT, "job-"));
   const uid = RUN_AS_TEX_USERS ? TEX_UID_BASE + slot : null;
   try {
@@ -256,13 +256,13 @@ async function compile(content, engine, slot, wantThumbnail = false, stopOnFirst
       await chown(texFile, uid, uid);
       await chmod(workDir, 0o700);
     }
-    const result = await runLatexmk(workDir, engine, uid, stopOnFirstError);
+    const result = await runLatexmk(workDir, engine, uid, stopOnFirstError, timeoutMs);
 
     const texLog = await readFile(path.join(workDir, "main.log"), "utf8").catch(() => "");
     const log = tail(texLog || result.output, MAX_LOG_BYTES);
 
     if (result.timedOut) {
-      return { ok: false, reason: "timeout", log: `${log}\n\nCompilation timed out after ${COMPILE_TIMEOUT_MS / 1000}s.` };
+      return { ok: false, reason: "timeout", log: `${log}\n\nCompilation timed out after ${Math.round(timeoutMs / 1000)}s.` };
     }
     if (result.signal === "SIGXFSZ" || (await hitFileLimit(workDir))) {
       return { ok: false, reason: "limit", log: `${log}\n\nCompilation stopped: a file exceeded ${MAX_FILE_KB / 1024} MB.` };
@@ -319,6 +319,10 @@ app.post("/compile", async (req, res) => {
   const engine = requestedEngine ?? detectEngine(content);
   const wantThumbnail = req.body?.thumbnail === true;
   const stopOnFirstError = req.body?.stopOnFirstError === true;
+  // The caller can ask for less time than our limit (it has its own deadline), never more.
+  const requested = Number(req.body?.timeoutMs);
+  const allowedMs = Number.isFinite(requested) ? Math.min(COMPILE_TIMEOUT_MS, Math.max(5_000, requested)) : COMPILE_TIMEOUT_MS;
+  const receivedAt = Date.now();
 
   let slot;
   try {
@@ -331,9 +335,16 @@ app.post("/compile", async (req, res) => {
     });
   }
 
+  // Time spent waiting in the queue counts against the caller's budget.
+  const timeoutMs = allowedMs - (Date.now() - receivedAt);
+  if (timeoutMs < 5_000) {
+    releaseSlot(slot);
+    res.setHeader("Retry-After", "5");
+    return res.status(503).json({ ok: false, error: "Compiler is busy, try again shortly" });
+  }
   const started = Date.now();
   try {
-    const result = await compile(content, engine, slot, wantThumbnail, stopOnFirstError);
+    const result = await compile(content, engine, slot, wantThumbnail, stopOnFirstError, timeoutMs);
     console.log(
       `compile engine=${engine} ok=${result.ok}${result.ok ? ` errors=${result.errors.length}` : ` reason=${result.reason}`} ms=${Date.now() - started}`
     );

@@ -254,19 +254,19 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 
 **Follow-ups found while testing step 1.1** (by priority):
 
-- [ ] **(High, blocks deploy)** The image is **3.98 GiB unpacked**. Railway accepted the previous image, which had the same TeX Live payload, so the limit is probably on the compressed size (~1.5 GB), but confirm on the first deploy. Fallback if rejected: drop `texmf-dist-langjapanese`/`langchinese`/`langkorean` (~650 MB).
-- [ ] **(Medium, do in 1.2)** The Next app's `/api/compile` maps the service's new **503 (busy)** to a generic 502 "LaTeX service request failed". Map it to "Compiler busy, retrying…" and retry after `Retry-After`.
+- [x] **(High, blocks deploy)** The image is **3.98 GiB unpacked**. Railway accepted the previous image, which had the same TeX Live payload, so the limit is probably on the compressed size (~1.5 GB), but confirm on the first deploy. Fallback if rejected: drop `texmf-dist-langjapanese`/`langchinese`/`langkorean` (~650 MB). *Resolved: Railway accepted it (and the +21 MB poppler layer in 5e).*
+- [x] **(Medium, do in 1.2)** The Next app's `/api/compile` maps the service's new **503 (busy)** to a generic 502 "LaTeX service request failed". Map it to "Compiler busy, retrying…" and retry after `Retry-After`. *Done (1.2, 27 Sep): busy → friendly message + one retry after Retry-After.*
 - [ ] **(Low)** Hitting the 50 MB file cap is stopped correctly (~1 s) but reported as `reason: "error"` instead of `"limit"` (the size check after SIGXFSZ still misses). Only affects the error message.
 - [ ] **(Low)** Templates weren't re-compiled against the new image locally (skipped on request). CI covers it on push, or you can run `npm run test:templates` against Railway after deploying (see guide).
 - [ ] **(Low, later)** Lua can still *read* world-readable public files (`/etc/passwd`, the TeX Live tree). No secrets are exposed, but noted.
 - [ ] **(Later / Phase 7)** TeX Live 2023 is three years old. Newer Alpine releases ship newer TeX Live; switch only after checking the image still fits.
 
-**1.2 Make the app side robust**
+**1.2 Make the app side robust** ✅ *Implemented 27 Sep 2026 (except log diagnostics in the editor). Also fixed: compile timeouts didn't fit Vercel's 60 s (the app waited up to 75 s): now one deadline covers every attempt and retry, and the service honours a per-request time limit (queue wait included).*
 
-- [ ] Middleware: return a JSON `401` for signed-out `/api/*` requests (right now it returns the HTML 404 page, and a 500 for uploads).
-- [ ] `/api/compile`: reject empty or whitespace-only content with a 400 "Document is empty", and map the service's 400 to 400 (not 502).
-- [ ] `/api/compile`: explicit `auth()` check, plus per-user rate limits via `user_usage.compiles` (e.g. free 50/day, Pro unlimited within fair use).
-- [ ] Friendly errors: "Compiler is waking up, retrying…". One automatic retry on 502/503/504, which covers cold starts.
+- [x] Middleware: return a JSON `401` for signed-out `/api/*` requests (right now it returns the HTML 404 page, and a 500 for uploads). *Done 27 Sep.*
+- [x] `/api/compile`: reject empty or whitespace-only content with a 400 "Document is empty", and map the service's 400 to 400 (not 502). *Empty content: done (400). Service 400 mapping still to check.*
+- [x] `/api/compile`: explicit `auth()` check, plus per-user rate limits via `user_usage.compiles` (e.g. free 50/day, Pro unlimited within fair use). *Done 27 Sep: auth + ownership (404) + 20/30 per minute + 300/month free, Pro 5,000 fair use, counted in `user_usage.compiles`.*
+- [x] Friendly errors: "Compiler is waking up, retrying…". One automatic retry on 502/503/504, which covers cold starts. *Done 27 Sep: one automatic retry for busy (Retry-After) and unreachable/502/504, friendly messages.*
 - [ ] Parse the TeX log into structured errors (line number + message) and show them in the editor as CodeMirror diagnostics. This also feeds the AI "fix this error" button in Phase 5.
 
 **1.3 Redeploy** First deploy ✅ done. Next: push the 1.1 changes and Railway rebuilds automatically. Keep `LATEX_API_SECRET` set, because the new service won't start without it. Steps and checks are in `replenish-guide.md`.
@@ -310,7 +310,7 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 - [x] Eval (`scripts/eval-inline-edit.ts`): 20 instructions × 3 templates. **60/60 passed** on flash-lite: every accepted edit compiled on Railway, metric requests got `[X]`/`[N]` placeholders, and no attack succeeded. 3 answers were fixed by the retry.
 
 **Follow-ups found while testing step 1.4** (by priority):
-- [ ] **(Medium, 1.2)** Signed-out `/api/ai/edit` returns the HTML 404 page instead of JSON 401 (same middleware issue as B15; already listed in 1.2).
+- [x] **(Medium, 1.2)** Signed-out `/api/ai/edit` returns the HTML 404 page instead of JSON 401 (same middleware issue as B15; already listed in 1.2). *Fixed by the middleware change.*
 - [ ] **(Medium, Phase 4)** The burst limiter is in memory, so on Vercel each instance counts separately. The monthly DB quota is the real cap. Move it to Upstash Redis together with the anonymous ATS limits.
 - [ ] **(Low, Phase 2)** `user_usage` has no unique key on `(user_id, date)`, so two concurrent first requests on a day can create duplicate rows. Totals stay correct because we sum; add the unique index in the Phase 2 migration.
 - [ ] **(Low, Phase 5)** The eval checks safety and compiling, not writing quality. Seen: "make the technologies bold" on a bullet with no technologies returned it unchanged (correct), and "italic technologies" italicised "unit"/"integration". Add an LLM-judge quality score when the command-bar evals are built.
@@ -392,7 +392,7 @@ Goal: every existing feature works on your machine, and we know exactly what's b
 - [ ] **(Low)** Clerk's widget is always dark (`@clerk/themes` `dark`), even in light mode. Switch its theme with `next-themes`.
 - [ ] **(Low)** Signed-out visitors to an unknown URL are sent to sign-in (the middleware protects all non-public paths) instead of the 404 page. Signed-in users get the 404.
 - [ ] **(Low)** Docs (`README.md`, `ARCHITECTURE.md`, `GUIDE.md`, deployment docs) still say TeXel and describe the old structure.
-- [ ] **(Low)** Resume cards show a generic page illustration. Real thumbnails need a stored render of each resume's first page (after the PDF storage work).
+- [x] **(Low)** Resume cards show a generic page illustration. Real thumbnails need a stored render of each resume's first page (after the PDF storage work). *Done in Phase 5e (real first-page thumbnails).*
 - [x] **(Low, Phase 5)** The editor autosaves once right after opening (content load triggers the debounce). Harmless, but a wasted write. *Fixed in Phase 5: autosave skips content that matches the last saved text.*
 
 ### Phase 3.4: Marketing site in this repo, then its rework (≈3–4 days)
@@ -531,7 +531,7 @@ Users then have three ways to edit: **(1) code by hand, (2) inline ⌘K on a sel
 
 **Follow-ups found while testing Phase 5** (by priority):
 - [ ] **(Medium, Phase 5)** "Done when" timing: *add a Projects entry → diff → keep → PDF* took **10.5 s** through the local dev server (8.4 s AI + 2.1 s compile), just over the ~10 s target; direct calls average 4 s. Measure on Vercel production; if it's still slow, stream the message first (SSE) or try thinking MINIMAL.
-- [ ] **(Medium, 1.2)** Signed-out calls to the new routes get the HTML 404 page instead of JSON 401 (same middleware issue as B15).
+- [x] **(Medium, 1.2)** Signed-out calls to the new routes get the HTML 404 page instead of JSON 401 (same middleware issue as B15). *Fixed by the middleware change.*
 - [ ] **(Low)** `gemini-3.1-flash-lite` is **not** good enough for the command bar: in 30 eval cases it failed 6 (it can't copy `find` text exactly, and once wrote the system prompt into the resume, which the new leak guard now blocks). Keep 3.6-flash.
 - [ ] **(Low)** Pro version history is "keep the last 100" rather than §7's "unlimited, 90 days". There's no manual **Save version** button yet (snapshots happen before AI changes and before restores).
 - [ ] **(Low)** `ai_messages` grows without limit per resume; prune to the last ~100 per project, and add "Clear conversation".
@@ -614,7 +614,7 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 - [ ] **(Medium, needs font files in projects)** Deedy Resume, McDowell CV (Times New Roman), billryan/resume, PlushCV: they ship font files. Same feature as images: multi-file compiles.
 - [ ] **(Medium, needs TeX Live 2024+)** moderncv 2.6.1 (Font Awesome 6), YAAC (`xetex-inputenc`). Also the newest Awesome-CV (pinned to the commit before Font Awesome 6).
 - [ ] **(Low)** Twenty Seconds CV compiles but its sidebar renders cut off; Resume NG's sample is in Chinese; cv-clean has an upstream bug (a stray `}`).
-- [ ] **(Low)** The compile service fails on any LaTeX error, while Overleaf still shows the PDF for recoverable errors. Consider returning the PDF with warnings when one was produced.
+- [x] **(Low)** The compile service fails on any LaTeX error, while Overleaf still shows the PDF for recoverable errors. Consider returning the PDF with warnings when one was produced. *Done in Phase 5f (compile despite errors).*
 - [ ] **(You)** Review the 14; decide whether to delete the 9 legacy hand-copied templates (hidden now, still open by id); pick the next batch (e.g. Overleaf gallery templates you download as .zip into `templates-src/`).
 
 ---

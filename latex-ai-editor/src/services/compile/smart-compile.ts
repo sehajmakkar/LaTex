@@ -6,7 +6,10 @@ export type SmartCompileOptions = CompileOptions & {
   forced?: LatexEngine | null;
   /** The engine that last compiled this project cleanly. */
   lastGood?: LatexEngine | null;
-  /** Don't start another attempt after this long (the route has 60 s). */
+  /**
+   * Total time for all attempts, retries included. Routes have 60 s on Vercel;
+   * the default leaves room to send the PDF back.
+   */
   budgetMs?: number;
   maxAttempts?: number;
 };
@@ -36,8 +39,9 @@ function score(r: CompileResult): number {
  *  - the best result wins (clean > fewest errors > any PDF).
  */
 export async function compileSmart(content: string, options: SmartCompileOptions = {}): Promise<SmartCompileResult> {
-  const { forced, lastGood, budgetMs = 35_000, maxAttempts = 3, ...compileOptions } = options;
+  const { forced, lastGood, budgetMs = 52_000, maxAttempts = 3, ...compileOptions } = options;
   const started = Date.now();
+  const deadline = started + budgetMs;
   const candidates = forced ? [forced] : engineCandidates(content, lastGood);
   const attempts: Attempt[] = [];
   const queue: LatexEngine[] = [candidates[0]];
@@ -46,14 +50,15 @@ export async function compileSmart(content: string, options: SmartCompileOptions
   while (queue.length && attempts.length < maxAttempts) {
     const engine = queue.shift()!;
     const t0 = Date.now();
-    const result = await compileLatex(content, engine, compileOptions);
+    const result = await compileLatex(content, engine, { ...compileOptions, deadline });
     attempts.push({ engine, ok: result.ok, errors: result.ok ? result.errors.length : -1, ms: Date.now() - t0 });
     if (!best || score(result) > score(best)) best = result;
 
     if (score(result) === 10_000 || forced) break;
     // Busy, timeout, unreachable: another engine won't help.
     if (!result.ok && result.code !== "COMPILE_ERROR") break;
-    if (Date.now() - started > budgetMs) break;
+    // Another attempt needs real time; don't start one that can't finish.
+    if (deadline - Date.now() < 10_000) break;
 
     const tried = new Set(attempts.map((a) => a.engine));
     const suggested = engineMismatch(result.log ?? "", engine).filter((e) => !tried.has(e) && !queue.includes(e));

@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isPublicRoute = createRouteMatcher([
@@ -10,10 +11,20 @@ const isPublicRoute = createRouteMatcher([
   "/ats/free(.*)",
 ]);
 
+const isApiRoute = createRouteMatcher(["/api(.*)", "/trpc(.*)"]);
+
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
+  if (isPublicRoute(req)) return;
+  if (isApiRoute(req)) {
+    // APIs answer in JSON: a signed-out call gets 401, not the HTML sign-in/404 page
+    // (which the app couldn't parse, and which broke file uploads with a 500).
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Sign in to continue." } }, { status: 401 });
+    }
+    return;
   }
+  await auth.protect();
 });
 
 export const config = {

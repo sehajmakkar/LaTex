@@ -56,6 +56,22 @@ class UserUsageRepository {
       .where(and(eq(userUsage.userId, userId), eq(userUsage.date, today)));
   }
 
+  async sumCompilesSince(userId: string, monthStart: string): Promise<number> {
+    const [row] = await db
+      .select({ total: sql<number>`coalesce(sum(${userUsage.compiles}), 0)::int` })
+      .from(userUsage)
+      .where(and(eq(userUsage.userId, userId), gte(userUsage.date, monthStart)));
+    return row?.total ?? 0;
+  }
+
+  async incrementCompiles(userId: string, today: string) {
+    await this.getOrCreateToday(userId, today);
+    await db
+      .update(userUsage)
+      .set({ compiles: sql`${userUsage.compiles} + 1` })
+      .where(and(eq(userUsage.userId, userId), eq(userUsage.date, today)));
+  }
+
   async sumAiImportsSince(userId: string, monthStart: string): Promise<number> {
     const [row] = await db
       .select({ total: sql<number>`coalesce(sum(${userUsage.aiImports}), 0)::int` })

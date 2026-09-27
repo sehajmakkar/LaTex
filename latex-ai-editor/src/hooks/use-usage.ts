@@ -6,8 +6,8 @@ import { useAuth } from "@clerk/nextjs";
 export type Usage = {
   plan: "free" | "pro";
   subscriptionStatus: string | null;
-  limits: { projects: number; aiEditsPerMonth: number; atsAiReviewsPerMonth: number; aiCommandsPerMonth: number; aiImportsPerMonth: number };
-  usage: { projects: number; aiEdits: number; atsAiReviews: number; aiCommands: number; aiImports: number };
+  limits: { projects: number; aiEditsPerMonth: number; atsAiReviewsPerMonth: number; aiCommandsPerMonth: number; aiImportsPerMonth: number; compilesPerMonth: number };
+  usage: { projects: number; aiEdits: number; atsAiReviews: number; aiCommands: number; aiImports: number; compiles: number };
 };
 
 /** Plan and monthly usage for the signed-in user (null when signed out). */
