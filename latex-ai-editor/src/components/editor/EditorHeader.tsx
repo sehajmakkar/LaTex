@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Check, CircleAlert, FileDown, Keyboard, Loader2, Play, ScanSearch } from "lucide-react";
+import { Check, CircleAlert, Copy, FileDown, Keyboard, Loader2, Play, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +22,8 @@ type EditorHeaderProps = {
   projectName: string;
   onRename?: (name: string) => void;
   onCompile: () => void;
+  /** Opens "Make a copy". */
+  onDuplicate?: () => void;
   isCompiling?: boolean;
   saveState: SaveState;
 };
@@ -38,7 +40,7 @@ function slug(name: string) {
   return name.trim().replace(/[^\w\- ]+/g, "").replace(/\s+/g, "-").toLowerCase() || "resume";
 }
 
-export function EditorHeader({ projectId, projectName, onRename, onCompile, isCompiling, saveState }: EditorHeaderProps) {
+export function EditorHeader({ projectId, projectName, onRename, onCompile, onDuplicate, isCompiling, saveState }: EditorHeaderProps) {
   const { pdfUrl } = useEditorStore();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(projectName);
@@ -115,6 +117,12 @@ export function EditorHeader({ projectId, projectName, onRename, onCompile, isCo
             ATS check
           </Link>
         </Button>
+        {onDuplicate && (
+          <Button variant="ghost" size="sm" onClick={onDuplicate} title="Make a copy of this resume" aria-label="Make a copy">
+            <Copy className="h-4 w-4" />
+            <span className="hidden lg:inline">Make a copy</span>
+          </Button>
+        )}
         {pdfUrl && (
           <Button variant="outline" size="sm" asChild>
             <a href={pdfUrl} download={`${slug(projectName)}.pdf`} aria-label="Download PDF">

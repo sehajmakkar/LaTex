@@ -16,6 +16,8 @@ import type { EditorApi, FixRequest, ReviewOutcome } from "@/components/editor/C
 import { EditorPane } from "@/components/editor/EditorPane";
 import { CommandBar } from "@/components/editor/CommandBar";
 import { useAiCommands, type Proposal } from "@/hooks/use-ai-commands";
+import { DuplicateDialog } from "@/components/shared/DuplicateDialog";
+import { copyName } from "@/lib/project-names";
 import { PdfPreview } from "@/components/preview/PdfPreview";
 import { useEditorStore } from "@/stores/editor-store";
 import { DEFAULT_LATEX_CONTENT } from "@/lib/constants";
@@ -43,6 +45,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   // `previewed`: the text last compiled successfully during the review (a preview, not saved).
   const reviewRef = useRef<(Proposal & { previewed?: string }) | null>(null);
   const [compileLog, setCompileLog] = useState<string | null>(null);
+  const [copyOpen, setCopyOpen] = useState(false);
   // The last content known to be on the server, so autosave skips no-op writes.
   const savedRef = useRef<string | null>(null);
 
@@ -110,9 +113,11 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       if (!res.ok) throw new Error("Save failed");
       savedRef.current = contentToSave;
       setSaveState("saved");
+      return true;
     } catch {
       setSaveState("error");
       toast.error("Failed to save");
+      return false;
     }
   }, [id]);
 
@@ -287,6 +292,16 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     />
   ) : null;
 
+  // "Make a copy" copies what's on the server, so save pending edits first.
+  const beforeCopy = useCallback(async () => {
+    if (reviewRef.current) {
+      toast.info("Keep or undo the AI changes first.");
+      return false;
+    }
+    debouncedSave.cancel();
+    return content === savedRef.current || (await saveContent(content)) !== false;
+  }, [content, debouncedSave, saveContent]);
+
   const handleRename = useCallback(
     async (name: string) => {
       if (id === "new" || !UUID_REGEX.test(id)) return;
@@ -319,9 +334,23 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         projectId={id}
         projectName={projectName}
         onCompile={handleCompile}
+        onDuplicate={UUID_REGEX.test(id) ? () => setCopyOpen(true) : undefined}
         isCompiling={isCompiling}
         saveState={saveState}
         onRename={id !== "new" && UUID_REGEX.test(id) ? handleRename : undefined}
+      />
+
+      <DuplicateDialog
+        source={copyOpen ? { id, name: projectName } : null}
+        suggestedName={copyName(projectName)}
+        onClose={() => setCopyOpen(false)}
+        beforeCopy={beforeCopy}
+        onCopied={(copy) => {
+          router.push(`/project/${copy.id}`);
+          toast.success(`You're now editing “${copy.name}”`, {
+            action: { label: "Back to original", onClick: () => router.push(`/project/${id}`) },
+          });
+        }}
       />
 
       {isDesktop ? (

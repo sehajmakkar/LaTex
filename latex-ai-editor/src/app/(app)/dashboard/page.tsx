@@ -8,6 +8,7 @@ import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import {
   ArrowRight,
+  Copy,
   FileText,
   LayoutTemplate,
   Loader2,
@@ -39,6 +40,8 @@ import { Page, PageHeader } from "@/components/shell/Page";
 import { IntentHandler } from "@/components/shell/IntentHandler";
 import { createBlankProject } from "@/lib/client/actions";
 import { useUsage } from "@/hooks/use-usage";
+import { DuplicateDialog } from "@/components/shared/DuplicateDialog";
+import { copyName } from "@/lib/project-names";
 
 type Project = {
   id: string;
@@ -136,6 +139,7 @@ function ResumesPage() {
   const [renameValue, setRenameValue] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [copying, setCopying] = useState<Project | null>(null);
 
   const refreshUsage = useCallback(() => queryClient.invalidateQueries({ queryKey: ["usage"] }), [queryClient]);
 
@@ -162,12 +166,16 @@ function ResumesPage() {
 
   const atLimit = usage ? usage.plan === "free" && usage.usage.projects >= usage.limits.projects : false;
 
+  const limitToast = useCallback(() => {
+    toast.error(`The free plan includes ${usage?.limits.projects} resumes.`, {
+      description: "Delete one, or upgrade to Pro for unlimited resumes.",
+      action: { label: "Upgrade", onClick: () => router.push("/billing") },
+    });
+  }, [usage, router]);
+
   const handleNew = useCallback(async () => {
     if (atLimit) {
-      toast.error(`The free plan includes ${usage?.limits.projects} resumes.`, {
-        description: "Delete one, or upgrade to Pro for unlimited resumes.",
-        action: { label: "Upgrade", onClick: () => router.push("/billing") },
-      });
+      limitToast();
       return;
     }
     setCreating(true);
@@ -179,7 +187,7 @@ function ResumesPage() {
       toast.error(error instanceof Error ? error.message : "Failed to create the resume");
       setCreating(false);
     }
-  }, [atLimit, usage, router, refreshUsage]);
+  }, [atLimit, limitToast, router, refreshUsage]);
 
   const handleRename = useCallback(
     async (project: Project) => {
@@ -339,6 +347,10 @@ function ResumesPage() {
                       <Pencil className="h-4 w-4" />
                       Rename
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => (atLimit ? limitToast() : setCopying(project))}>
+                      <Copy className="h-4 w-4" />
+                      Make a copy
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href={`/ats?project=${project.id}`}>
                         <ScanSearch className="h-4 w-4" />
@@ -357,6 +369,19 @@ function ResumesPage() {
           ))}
         </div>
       )}
+
+      <DuplicateDialog
+        source={copying}
+        suggestedName={copying ? copyName(copying.name, projects?.map((p) => p.name) ?? []) : ""}
+        onClose={() => setCopying(null)}
+        onCopied={(copy) => {
+          setProjects((prev) => [copy, ...(prev ?? [])]);
+          refreshUsage();
+          toast.success(`Created “${copy.name}”`, {
+            action: { label: "Open", onClick: () => router.push(`/project/${copy.id}`) },
+          });
+        }}
+      />
 
       <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <DialogContent>

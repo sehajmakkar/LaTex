@@ -599,3 +599,47 @@ To get an Overleaf project: open it on overleaf.com → **Menu → Download → 
 | 11 | | |
 | 12 | | |
 | 13 | | |
+
+---
+
+## Step: Phase 5c, duplicate a resume ("Make a copy") (27 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| API | `POST /api/projects/[id]/duplicate` with optional `{ name }`: ownership, resume limit, copies LaTeX + template | `src/app/api/projects/[id]/duplicate/route.ts`, `src/services/project-service.ts` |
+| Naming | "Name (copy)", "(copy 2)"…, no stacked suffixes | `src/lib/project-names.ts` (+ test) |
+| UI | Shared "Make a copy" dialog; dashboard ⋯ menu; editor header button (saves pending edits first, opens the copy) | `src/components/shared/DuplicateDialog.tsx`, dashboard page, `EditorHeader.tsx`, project page |
+| Copy | Limit message says "resumes" | `project-service.ts` |
+
+### What I already verified
+- Unit tests **82/82** (3 new for naming).
+- **End-to-end API 11/11** (dev server, two temporary users, deleted afterwards): default name, identical LaTeX + template, AI chat not copied, custom (trimmed) name, 403 at 3 resumes on Free, copy of a copy → "(copy 2)", other user's / invalid / unknown id → 404, name > 100 chars → 400, usage counts copies.
+- `tsc`, ESLint (0 errors), `npm run build`.
+
+### Setup
+Restart `npm run dev`. No env or database changes.
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | Dashboard → a resume's ⋯ → **Make a copy** | Dialog with "Name (copy)" selected; Enter creates it; it appears first in the list; toast with **Open** |
+| 2 | Make a copy of that copy | Suggested name "Name (copy 2)" |
+| 3 | Type your own name ("Google SWE") | Copy is created with that name |
+| 4 | Free plan with 3 resumes → Make a copy | Upgrade toast, no dialog |
+| 5 | Editor → type something → immediately **Make a copy** | The copy includes what you just typed |
+| 6 | After copying from the editor | The copy opens; toast "You're now editing …" with **Back to original** |
+| 7 | Editor with an AI diff open → Make a copy | "Keep or undo the AI changes first" |
+| 8 | Open the copy's command bar | Empty conversation (the chat stayed with the original) |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |
+| 8 | | |

@@ -580,6 +580,26 @@ Users then have three ways to edit: **(1) code by hand, (2) inline ⌘K on a sel
 
 
 
+### Phase 5c: Duplicate a resume ("Make a copy") ✅
+
+*Implemented 27 Sep 2026. Unit tests 3 new (82 total), end-to-end API 11/11. Steps are in `replenish-guide.md`.*
+
+Overleaf users copy a resume per job all the time, so Vero has the same **Make a copy**:
+- [x] `POST /api/projects/[id]/duplicate` (`{ name? }`): ownership check (404 for someone else's or an invalid id), the plan's resume limit (403 `PROJECT_LIMIT_REACHED`), copies the LaTeX and template id. The AI chat and version history stay with the original.
+- [x] Default name like Overleaf: "Name (copy)", then "(copy 2)"… without stacking suffixes on a copy of a copy (`src/lib/project-names.ts`).
+- [x] **Dashboard:** "Make a copy" in each resume's ⋯ menu → name dialog → the copy appears at the top (toast with Open). At the Free limit: upgrade toast instead.
+- [x] **Editor:** "Make a copy" in the header. Pending edits are saved first (blocked while an AI diff is open), then the copy opens, with "Back to original" in the toast.
+- [x] The limit message now says "resumes", not "projects".
+
+**Follow-ups** (by priority):
+- [ ] **(Low)** Copying doesn't carry over version history or the AI chat (by design). Revisit if users ask.
+- [ ] **(Low, Phase 7)** "Tailor to a job" should build on this: make a copy, then run the command bar's tailoring on the copy.
+- [ ] **(Low)** Browser check of the dialog on both screens (see guide).
+
+---
+
+
+
 ### Phase 6: Production launch (≈3–4 days)
 
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).
@@ -606,7 +626,7 @@ Based on Overleaf, Rezi, Teal, Jobscan, Enhancv, FlowCV, and Kickresume:
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | P1       | ~~**Import an existing resume → LaTeX template**~~ ✅ Done in Phase 5b (Overleaf .zip/.tex as-is; PDF/DOCX/text → structured JSON → Jake's layout)   | The best onboarding hook: most people arrive with a resume already. The ATS upload pipeline already extracts text. |
 | P1       | **Tailor to a job**: paste a JD → creates a tailored copy of the resume, runs the command bar with a tailoring prompt, and shows the match-score change | The core loop for job seekers. Jobscan and Teal charge for this.                                                   |
-| P1       | **Version history and duplicate project**                                                                                                               | Needed before people trust AI edits. Tables from Phase 5.                                                          |
+| P1       | ~~**Version history and duplicate project**~~ ✅ Version history in Phase 5, duplicate ("Make a copy") in Phase 5c                                                                                                               | Needed before people trust AI edits. Tables from Phase 5.                                                          |
 | P2       | **Cover letter generator** (resume + JD → LaTeX letter in a matching style)                                                                             | Cheap to build on top of the same stack                                                                            |
 | P2       | **Share link / public resume URL** (read-only PDF page, view count)                                                                                     | Growth: every shared resume advertises Vero                                                                        |
 | P2       | **PDF click-to-source** (SyncTeX + pdf.js) and **fit-to-one-page** helper                                                                               | Differentiators that non-LaTeX builders can't match                                                                |
