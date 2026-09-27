@@ -41,6 +41,11 @@ class ProjectRepository {
     await db.update(projects).set({ thumbnailUpdatedAt: at }).where(eq(projects.id, id));
   }
 
+  /** Remembers the engine that compiled cleanly (doesn't touch updatedAt). */
+  async setLastEngine(id: string, engine: string | null) {
+    await db.update(projects).set({ lastEngine: engine }).where(eq(projects.id, id));
+  }
+
   async delete(id: string) {
     await db.delete(projects).where(eq(projects.id, id));
   }

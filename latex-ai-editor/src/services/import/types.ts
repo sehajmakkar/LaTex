@@ -13,6 +13,8 @@ export type ImportReport = {
   embedded?: string[];
   compiles?: boolean;
   engine?: string;
-  /** First LaTeX error when it doesn't compile. */
+  /** LaTeX errors the PDF was produced despite (0 = clean). */
+  compileErrors?: number;
+  /** First LaTeX error (it doesn't compile, or compiles with errors). */
   compileError?: string;
 };

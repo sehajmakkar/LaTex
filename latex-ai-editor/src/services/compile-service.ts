@@ -16,9 +16,37 @@ export type CompileFailureCode =
   | "COMPILE_SERVICE_UNAUTHORIZED"
   | "COMPILE_BUSY";
 
+export type CompileError = { file: string | null; line: number | null; message: string };
+
 export type CompileResult =
-  | { ok: true; pdf: Buffer; log: string; engine: string; /** First page as PNG, when asked for and supported. */ thumbnail?: Buffer }
-  | { ok: false; code: CompileFailureCode; message: string; log?: string; engine?: string; status?: number };
+  | {
+      ok: true;
+      pdf: Buffer;
+      log: string;
+      engine: LatexEngine;
+      /** LaTeX errors the PDF was produced despite (empty = clean). */
+      errors: CompileError[];
+      /** First page as PNG, when asked for and supported. */
+      thumbnail?: Buffer;
+    }
+  | { ok: false; code: CompileFailureCode; message: string; log?: string; engine?: LatexEngine; errors?: CompileError[]; status?: number };
+
+export type CompileOptions = {
+  thumbnail?: boolean;
+  /** Overleaf's "Stop on first error": no PDF when there's any error. Default: compile despite errors. */
+  stopOnFirstError?: boolean;
+};
+
+function readErrors(value: unknown): CompileError[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((e): e is Record<string, unknown> => !!e && typeof e === "object" && typeof (e as { message?: unknown }).message === "string")
+    .map((e) => ({
+      file: typeof e.file === "string" ? e.file : null,
+      line: typeof e.line === "number" ? e.line : null,
+      message: String(e.message),
+    }));
+}
 
 /**
  * Compiles a LaTeX document to PDF: on the remote compile service when
@@ -27,14 +55,14 @@ export type CompileResult =
 export async function compileLatex(
   content: string,
   requestedEngine?: LatexEngine,
-  options: { thumbnail?: boolean } = {}
+  options: CompileOptions = {}
 ): Promise<CompileResult> {
   const engine = requestedEngine ?? detectEngine(content);
   const serviceBase = env.LATEX_SERVICE_URL?.replace(/\/$/, "");
-  return serviceBase ? compileRemote(serviceBase, content, engine, !!options.thumbnail) : compileLocal(content, engine);
+  return serviceBase ? compileRemote(serviceBase, content, engine, options) : compileLocal(content, engine);
 }
 
-async function compileRemote(serviceBase: string, content: string, engine: LatexEngine, thumbnail: boolean): Promise<CompileResult> {
+async function compileRemote(serviceBase: string, content: string, engine: LatexEngine, options: CompileOptions): Promise<CompileResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), COMPILE_TIMEOUT_MS + REMOTE_FETCH_BUFFER_MS);
   try {
@@ -45,7 +73,12 @@ async function compileRemote(serviceBase: string, content: string, engine: Latex
       method: "POST",
       headers,
       // Services without thumbnail support ignore the flag.
-      body: JSON.stringify({ content, engine, ...(thumbnail ? { thumbnail: true } : {}) }),
+      body: JSON.stringify({
+        content,
+        engine,
+        ...(options.thumbnail ? { thumbnail: true } : {}),
+        ...(options.stopOnFirstError ? { stopOnFirstError: true } : {}),
+      }),
       signal: controller.signal,
     });
     const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
@@ -56,7 +89,8 @@ async function compileRemote(serviceBase: string, content: string, engine: Latex
         code: "COMPILE_ERROR",
         message: "Compilation failed",
         log: typeof body?.log === "string" ? body.log : "",
-        engine: typeof body?.engine === "string" ? body.engine : engine,
+        engine,
+        errors: readErrors(body?.errors),
         status: 422,
       };
     }
@@ -78,7 +112,9 @@ async function compileRemote(serviceBase: string, content: string, engine: Latex
       ok: true,
       pdf: Buffer.from(body.pdf, "base64"),
       log: typeof body.log === "string" ? body.log : "",
-      engine: typeof body.engine === "string" ? body.engine : engine,
+      engine,
+      // Older services stop on the first error, so a PDF from them is always clean.
+      errors: readErrors(body.errors),
       thumbnail: typeof body.thumbnail === "string" ? Buffer.from(body.thumbnail, "base64") : undefined,
     };
   } catch (error) {
@@ -103,7 +139,7 @@ async function compileLocal(content: string, engine: LatexEngine): Promise<Compi
     if (!result.success) {
       return { ok: false, code: "COMPILE_ERROR", message: "Compilation failed", log: result.log, engine, status: 422 };
     }
-    return { ok: true, pdf: await readFile(join(workDir, "main.pdf")), log: result.log, engine };
+    return { ok: true, pdf: await readFile(join(workDir, "main.pdf")), log: result.log, engine, errors: [] };
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => {});
   }

@@ -11,8 +11,7 @@ import { projectService } from "@/services/project-service";
 import { extractDocx, extractPdf, extractTxt, type Extraction } from "@/services/ats/extract";
 import { importTexFile, importZip, LatexImportError, type LatexImport } from "@/services/import/latex-import";
 import { importWithAI } from "@/services/import/ai-import";
-import { compileWithEngineProbe } from "@/services/import/engine-probe";
-import { compileLatex } from "@/services/compile-service";
+import { compileSmart } from "@/services/compile/smart-compile";
 import { thumbnailService } from "@/services/thumbnail-service";
 import { renderResume, unsupportedChars } from "@/services/import/render";
 import { resumeStrings } from "@/services/import/resume-data";
@@ -94,8 +93,14 @@ export async function POST(req: NextRequest) {
         if (e instanceof LatexImportError) return error("INVALID_PROJECT", e.message, 422);
         throw e;
       }
-      const probe = await compileWithEngineProbe(result.content, { thumbnail: true });
-      const project = await projectService.createForUser(userId, { name: titleFrom(fileName), content: probe.content, templateId: null });
+      // Overleaf keeps the compiler in project settings, not the source: find the engine that works.
+      const probe = await compileSmart(result.content, { thumbnail: true });
+      const project = await projectService.createForUser(userId, {
+        name: titleFrom(fileName),
+        content: result.content,
+        templateId: null,
+        lastEngine: probe.ok ? probe.engine : null,
+      });
       const report: ImportReport = {
         method: "latex",
         fileType,
@@ -107,9 +112,10 @@ export async function POST(req: NextRequest) {
         embedded: result.embedded,
         compiles: probe.ok,
         engine: probe.ok ? probe.engine : undefined,
+        compileErrors: probe.ok ? probe.errors.length : undefined,
         compileError: probe.ok
-          ? undefined
-          : (probe.log ?? "").split("\n").find((l) => /^!|:\d+: /.test(l))?.slice(0, 300) ?? probe.message,
+          ? probe.errors[0]?.message
+          : (probe.errors?.[0]?.message ?? (probe.log ?? "").split("\n").find((l) => /^!|:\d+: /.test(l))?.slice(0, 300) ?? probe.message),
       };
       console.log(JSON.stringify({ event: "import", userId, method: "latex", fileType, embedded: result.embedded.length, warnings: result.warnings.length }));
       const thumb = probe.ok ? probe.thumbnail : undefined;
@@ -162,11 +168,12 @@ export async function POST(req: NextRequest) {
       content = `% CHECK THESE: they weren't found word-for-word in your file.\n${list.join("\n")}\n${content}`;
     }
     // The renderer escapes everything, so this should always compile; check anyway.
-    const compiled = await compileLatex(content, undefined, { thumbnail: true });
+    const compiled = await compileSmart(content, { thumbnail: true });
     const project = await projectService.createForUser(userId, {
       name: result.data.name.trim() ? `${result.data.name.trim().slice(0, 60)} (imported)` : titleFrom(fileName),
       content,
       templateId: null,
+      lastEngine: compiled.ok ? compiled.engine : null,
     });
     await userUsageRepository.incrementAiImports(userId, today).catch((e) => console.error("Import usage not recorded:", e));
 

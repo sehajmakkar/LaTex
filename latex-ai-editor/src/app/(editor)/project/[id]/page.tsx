@@ -18,6 +18,8 @@ import { CommandBar } from "@/components/editor/CommandBar";
 import { useAiCommands, type Proposal } from "@/hooks/use-ai-commands";
 import { DuplicateDialog } from "@/components/shared/DuplicateDialog";
 import { copyName } from "@/lib/project-names";
+import { ENGINE_LABEL, toEngine, type LatexEngine } from "@/lib/latex-engine";
+import type { Compiler } from "@/components/editor/EditorHeader";
 import { PdfPreview } from "@/components/preview/PdfPreview";
 import { useEditorStore } from "@/stores/editor-store";
 import { DEFAULT_LATEX_CONTENT } from "@/lib/constants";
@@ -45,6 +47,9 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   // `previewed`: the text last compiled successfully during the review (a preview, not saved).
   const reviewRef = useRef<(Proposal & { previewed?: string }) | null>(null);
   const [compileLog, setCompileLog] = useState<string | null>(null);
+  // "auto" or a forced engine (project setting), and the engine the last compile used.
+  const [compiler, setCompiler] = useState<Compiler>("auto");
+  const [usedEngine, setUsedEngine] = useState<LatexEngine | null>(null);
   const [copyOpen, setCopyOpen] = useState(false);
   // The last content known to be on the server, so autosave skips no-op writes.
   const savedRef = useRef<string | null>(null);
@@ -91,6 +96,8 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         savedRef.current = loaded;
         setContent(loaded);
         setProjectName(data.data.name);
+        setCompiler((data.data.compiler as Compiler) ?? "auto");
+        setUsedEngine(toEngine(data.data.lastEngine));
       })
       .catch(() => { })
       .finally(() => {
@@ -128,9 +135,10 @@ export default function ProjectPage({ params }: ProjectPageProps) {
    * saves it. Resolves with the result; never throws.
    */
   const compile = useCallback(
-    async (source: string = content, { save = true } = {}): Promise<{ ok: boolean; log?: string }> => {
+    async (source: string = content, { save = true } = {}): Promise<{ ok: boolean; log?: string; errors: number }> => {
       setCompileState({ status: "compiling", startedAt: new Date() });
-      const run = (async () => {
+      const toastId = toast.loading("Compiling…");
+      try {
         const response = await fetch("/api/compile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -140,32 +148,61 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         const body = await response.json().catch(() => null);
         if (!response.ok) {
           const log: string | undefined = body?.error?.details?.log || undefined;
+          const firstError: string | undefined = body?.error?.details?.errors?.[0]?.message;
           setCompileLog(log ?? null);
-          throw Object.assign(new Error(body?.error?.message || "Compilation failed"), { log });
+          const message = body?.error?.message || "Compilation failed";
+          setCompileState({ status: "error", message });
+          toast.error(message, { id: toastId, description: firstError });
+          return { ok: false, log, errors: -1 };
         }
-        setCompileLog(null);
-        setPdfUrl(body.data.pdfUrl);
+        const data = body.data as { pdfUrl: string; log: string; engine: LatexEngine; errors: { line: number | null; message: string }[]; switchedFrom: LatexEngine | null };
+        const errors = data.errors ?? [];
+        setPdfUrl(data.pdfUrl);
+        setUsedEngine(data.engine);
         setActiveTab("output");
-        setCompileState({ status: "success", pdfUrl: body.data.pdfUrl, compiledAt: new Date() });
+        setCompileState({ status: "success", pdfUrl: data.pdfUrl, compiledAt: new Date() });
+        // Like Overleaf: a PDF despite errors is still a result, but say so and offer the fix.
+        setCompileLog(errors.length ? data.log : null);
+        if (errors.length) {
+          const first = errors[0];
+          toast.warning(`Compiled with ${errors.length} LaTeX error${errors.length > 1 ? "s" : ""}`, {
+            id: toastId,
+            description: `${first.line ? `Line ${first.line}: ` : ""}${first.message}. Use "Fix compile error" in the AI bar, or fix it in the code.`,
+          });
+        } else if (data.switchedFrom) {
+          toast.success(`Compiled with ${ENGINE_LABEL[data.engine]}`, {
+            id: toastId,
+            description: `This document needs ${ENGINE_LABEL[data.engine]}, not ${ENGINE_LABEL[data.switchedFrom]}. Vero will use it from now on.`,
+          });
+        } else {
+          toast.success(save ? "Compiled successfully!" : "Preview compiled. The AI changes aren't saved until you keep them.", { id: toastId });
+        }
         if (save) await saveContent(source);
-        return body;
-      })();
-      toast.promise(run, {
-        loading: "Compiling...",
-        success: save ? "Compiled successfully!" : "Preview compiled. The AI changes aren't saved until you keep them.",
-        error: (err) => {
-          setCompileState({ status: "error", message: err.message });
-          return err.message;
-        },
-      });
-      try {
-        await run;
-        return { ok: true };
-      } catch (err) {
-        return { ok: false, log: (err as { log?: string }).log };
+        return { ok: true, log: data.log, errors: errors.length };
+      } catch {
+        setCompileState({ status: "error", message: "Couldn't reach the compiler" });
+        toast.error("Couldn't reach the compiler. Check your connection and try again.", { id: toastId });
+        return { ok: false, errors: -1 };
       }
     },
     [id, content, setCompileState, setPdfUrl, setActiveTab, saveContent]
+  );
+
+  const handleCompilerChange = useCallback(
+    async (next: Compiler) => {
+      setCompiler(next);
+      const res = await fetch(`/api/projects/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ compiler: next }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        toast.error("Couldn't change the compiler");
+        return;
+      }
+      if (!reviewRef.current) compile();
+    },
+    [id, compile]
   );
 
   const handleCompile = useCallback(async () => {
@@ -234,7 +271,8 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       // Already compiled exactly this text as a preview: the PDF is current.
       if (proposal.previewed === next) return;
       const result = await compile(next);
-      if (!result.ok && result.log && !proposal.autoFix) {
+      // No PDF, or a PDF with errors after an AI change: one automatic fix attempt.
+      if ((!result.ok || result.errors > 0) && result.log && !proposal.autoFix) {
         toast.info("That change broke the build. Asking Vero to fix it…");
         sendCommand({ instruction: "Fix the LaTeX compile error.", compileLog: result.log, autoFix: true });
       }
@@ -336,6 +374,9 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         projectName={projectName}
         onCompile={handleCompile}
         onDuplicate={UUID_REGEX.test(id) ? () => setCopyOpen(true) : undefined}
+        compiler={compiler}
+        usedEngine={usedEngine}
+        onCompilerChange={UUID_REGEX.test(id) ? handleCompilerChange : undefined}
         isCompiling={isCompiling}
         saveState={saveState}
         onRename={id !== "new" && UUID_REGEX.test(id) ? handleRename : undefined}

@@ -764,3 +764,52 @@ Why: galleries like Overleaf's use 3 wide columns with cropped previews; builder
 | 2 | | |
 | 3 | | |
 | 4 | | |
+
+---
+
+## Step: Phase 5f, engine selection that doesn't fail (27 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Compile service | **Compile despite errors** (latexmk `-f`, Overleaf's default): returns the PDF + parsed error list; `stopOnFirstError` opt-in | `latex-service/server.js`, `engine-detect.js` |
+| Engine choice | Directive (incl. `TS-program`) > last engine that worked > code analysis (comments ignored; Lua/XeTeX/fontspec/pdfTeX/non-Latin signals) | `src/lib/latex-engine.ts` |
+| Fallback | Reads the log for engine-mismatch signatures and retries with the right engine; keeps the best result; remembers the winner | `src/services/compile/smart-compile.ts`, `/api/compile` |
+| Settings | Per-project **Compiler** (Auto / pdfLaTeX / XeLaTeX / LuaLaTeX) in the editor header; DB columns `compiler`, `last_engine` (**already applied to Neon**) | `EditorHeader.tsx`, project page, `schema.ts`, `/api/projects/[id]` |
+| Editor | "Compiled with N errors" warning + AI "Fix compile error"; "Compiled with XeLaTeX (this document needs it)" when Auto switched | project page |
+| Templates / import / ATS | New resumes start with their template's engine; imports and ATS scans use the same logic | `/api/projects`, import route, ATS scan, catalog |
+
+### What I already verified
+- Unit tests **105/105** (23 new: detection, signatures, fallback with a scripted compiler).
+- **Eval 38/38** against the new service in local Docker (`scripts/eval-engines.ts`): any PDF 29 → 37, clean 29 → 35 (old approach vs new). Typos and misspelled environments now give a PDF with the errors listed; wrong directives / stale engines / Unicode symbols recover automatically.
+- End-to-end through the dev server (current Railway service): template engine remembered, stale engine → fallback + re-learned, forced compiler honoured (no fallback), invalid compiler 400, duplicate keeps it.
+- ESLint 0 errors, `npm run build`.
+
+### Setup (you)
+```bash
+cd latex-ai-editor/latex-service
+railway up
+```
+Then restart `npm run dev`.
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | Editor header | "Auto · pdfLaTeX" (or the engine used); menu with Auto / pdfLaTeX / XeLaTeX / LuaLaTeX |
+| 2 | Make a typo (`\textbff`) → Compile | PDF still shows; warning "Compiled with 1 LaTeX error" with the line; "Fix compile error" chip in the AI bar |
+| 3 | Add `\usepackage{fontspec}` to a pdfLaTeX resume → Compile | Compiles; toast "Compiled with XeLaTeX … Vero will use it from now on"; header shows "Auto · XeLaTeX" |
+| 4 | Remove it again → Compile | Back to pdfLaTeX automatically (the old engine fails on `\pdfgentounicode`, falls back) |
+| 5 | Set Compiler to LuaLaTeX | Recompiles with LuaLaTeX; stays forced (no auto switching) |
+| 6 | Use the Awesome CV template | Compiles with XeLaTeX first time |
+| 7 | Type `→` or `✓` in a bullet (pdfLaTeX resume) | Compiles (switches to XeLaTeX) instead of failing |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |

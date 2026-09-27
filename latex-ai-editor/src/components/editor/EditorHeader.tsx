@@ -3,19 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Check, CircleAlert, Copy, FileDown, Keyboard, Loader2, Play, ScanSearch } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, Copy, Cpu, FileDown, Keyboard, Loader2, Play, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { VeroMark } from "@/components/brand/VeroLogo";
 import { useEditorStore } from "@/stores/editor-store";
+import { ENGINE_LABEL, type LatexEngine } from "@/lib/latex-engine";
 
 export type SaveState = "saved" | "saving" | "error";
+
+/** Project compiler setting: auto (recommended) or a forced engine, like Overleaf's Compiler menu. */
+export type Compiler = "auto" | LatexEngine;
+
+const COMPILER_OPTIONS: { value: Compiler; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto (recommended)", hint: "Picks the engine your document needs and switches if it fails" },
+  { value: "pdflatex", label: "pdfLaTeX", hint: "Standard LaTeX; most templates" },
+  { value: "xelatex", label: "XeLaTeX", hint: "System/OpenType fonts (fontspec), Unicode text" },
+  { value: "lualatex", label: "LuaLaTeX", hint: "Fonts plus Lua scripting" },
+];
 
 type EditorHeaderProps = {
   projectId: string;
@@ -24,6 +38,10 @@ type EditorHeaderProps = {
   onCompile: () => void;
   /** Opens "Make a copy". */
   onDuplicate?: () => void;
+  compiler?: Compiler;
+  /** Engine the last compile used (shown next to "Auto"). */
+  usedEngine?: LatexEngine | null;
+  onCompilerChange?: (compiler: Compiler) => void;
   isCompiling?: boolean;
   saveState: SaveState;
 };
@@ -40,7 +58,18 @@ function slug(name: string) {
   return name.trim().replace(/[^\w\- ]+/g, "").replace(/\s+/g, "-").toLowerCase() || "resume";
 }
 
-export function EditorHeader({ projectId, projectName, onRename, onCompile, onDuplicate, isCompiling, saveState }: EditorHeaderProps) {
+export function EditorHeader({
+  projectId,
+  projectName,
+  onRename,
+  onCompile,
+  onDuplicate,
+  compiler = "auto",
+  usedEngine,
+  onCompilerChange,
+  isCompiling,
+  saveState,
+}: EditorHeaderProps) {
   const { pdfUrl } = useEditorStore();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(projectName);
@@ -130,6 +159,34 @@ export function EditorHeader({ projectId, projectName, onRename, onCompile, onDu
               <span className="hidden sm:inline">Download</span>
             </a>
           </Button>
+        )}
+        {onCompilerChange && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="hidden gap-1 text-xs text-muted-foreground md:inline-flex" title="Compiler">
+                <Cpu className="h-3.5 w-3.5" />
+                {compiler === "auto" ? `Auto${usedEngine ? ` · ${ENGINE_LABEL[usedEngine]}` : ""}` : ENGINE_LABEL[compiler]}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Compiler</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={compiler} onValueChange={(v) => onCompilerChange(v as Compiler)}>
+                {COMPILER_OPTIONS.map((o) => (
+                  <DropdownMenuRadioItem key={o.value} value={o.value} className="items-start py-2">
+                    <div>
+                      <p className="text-sm">{o.label}</p>
+                      <p className="text-xs text-muted-foreground">{o.hint}</p>
+                    </div>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                Errors don&apos;t stop the PDF: you get the PDF and the list of errors, like Overleaf.
+              </p>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <Button size="sm" onClick={onCompile} disabled={isCompiling}>
           {isCompiling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { projectService } from "@/services/project-service";
 import { userService } from "@/services/user-service";
 import { AppError, ProjectLimitError } from "@/lib/errors";
-import { getTemplatePreview } from "@/templates";
+import { getTemplateById, getTemplatePreview } from "@/templates";
 
 const CreateProjectSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -69,6 +69,8 @@ export async function POST(req: NextRequest) {
       name: parsed.data.name ?? "Untitled Project",
       content: parsed.data.content ?? "",
       templateId: parsed.data.templateId ?? null,
+      // Start with the engine the template is known to compile with.
+      lastEngine: parsed.data.templateId ? (getTemplateById(parsed.data.templateId)?.engine ?? null) : null,
     });
 
     return NextResponse.json({ data: project }, { status: 201 });

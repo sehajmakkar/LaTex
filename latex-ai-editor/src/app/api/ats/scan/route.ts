@@ -6,7 +6,8 @@ import { userRepository } from "@/repositories/user-repository";
 import { userUsageRepository } from "@/repositories/user-usage-repository";
 import { userService } from "@/services/user-service";
 import { projectService } from "@/services/project-service";
-import { compileLatex } from "@/services/compile-service";
+import { compileSmart } from "@/services/compile/smart-compile";
+import { toEngine } from "@/lib/latex-engine";
 import { extractDocx, extractPdf, extractTxt, type Extraction } from "@/services/ats/extract";
 import { buildAtsReport } from "@/services/ats/pipeline";
 import { isR2Enabled, uploadResumeObject } from "@/services/storage/r2";
@@ -106,7 +107,10 @@ export async function POST(req: NextRequest) {
       if (project.userId !== userId) return error("NOT_FOUND", "Resume not found.", 404);
       if (!project.content.trim()) return error("EMPTY_RESUME", "This resume is empty. Add some content first.", 422);
 
-      const compiled = await compileLatex(project.content);
+      const compiled = await compileSmart(project.content, {
+        forced: toEngine(project.compiler),
+        lastGood: toEngine(project.lastEngine),
+      });
       if (!compiled.ok) {
         return compiled.code === "COMPILE_ERROR"
           ? error("COMPILE_ERROR", "This resume doesn't compile yet. Fix the errors in the editor, then run the check again.", 422)

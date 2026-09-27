@@ -640,6 +640,33 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 
 
 
+### Phase 5f: Engine selection that doesn't fail (compiler setting, fallback, compile despite errors) ✅ (needs `railway up`)
+
+*27 Sep 2026. Unit tests 23 new (105 total); eval 38/38 documents; end-to-end route checks pass.*
+
+**Before:** one guess from the source (magic comment, else Lua packages → LuaLaTeX, fontspec → XeLaTeX, else pdfLaTeX; commented-out lines counted too), no second try, and the service stopped at the first error, so any small mistake meant no PDF.
+
+**Overleaf** (research): no auto-detection. A per-project **Compiler** setting (pdfLaTeX default, XeLaTeX, LuaLaTeX); gallery templates carry their compiler; by default it **tries to compile despite errors** ("Stop on first error" is opt-in).
+
+**Now** (Overleaf's model plus automatic recovery):
+- [x] **Compile despite errors** (service: latexmk `-f`): a PDF is returned whenever one is produced, with the parsed error list; `stopOnFirstError` is opt-in. The editor shows "Compiled with N errors" and the AI bar's "Fix compile error".
+- [x] **Compiler setting per project** (Auto default, or pdfLaTeX / XeLaTeX / LuaLaTeX) in the editor header; `projects.compiler`, `projects.last_engine` (applied to Neon: `drizzle/manual/2026-09-27-project-compiler.sql`).
+- [x] **Auto order:** directive (`% !TEX program` or `TS-program`) > the engine that last compiled this project cleanly > analysis of the code (comments ignored; LuaTeX-only / XeTeX-only / fontspec-family / pdfTeX primitives / non-Latin script).
+- [x] **Signature fallback** (`engineMismatch`): e.g. "fontspec requires XeTeX or LuaTeX", "Unicode character not set up", undefined `\pdfgentounicode` / `\directlua`, "LuaTeX is required", missing font on one Unicode engine. The suggested engine is tried; with no PDF at all, the rest are tried too. Best result wins; the winner is remembered. Service problems (busy/timeout) never trigger retries; 35 s budget, max 3 attempts.
+- [x] Templates record their engine (new resumes start with it); imports and ATS scans use the same logic; the import no longer writes a `% !TEX program` line into the source.
+
+**Eval** (`scripts/eval-engines.ts`, local new service): 14 catalog + 9 legacy templates + default + 11 hard cases (wrong directive, stale memory, typos, misspelled environment, Unicode symbols, Chinese, Lua, dead code, commented-out packages, a truly broken file). **Any PDF: 29 → 37 of 38. Clean PDF: 29 → 35.** The only failure is a file with no `\end{document}`.
+
+**Follow-ups:**
+- [ ] **(You)** `railway up` from `latex-service/` for "compile despite errors". Before that, fallback still works (the old service's error log carries the same signatures), but any error means no PDF.
+- [ ] **(Medium, 1.2)** Show the parsed errors in the editor (line markers / a problems list), not just the toast.
+- [ ] **(Low)** Chinese/Japanese/Korean text compiles on XeLaTeX but renders blank without a CJK font setup (xeCJK + a font). Consider auto-adding one, or a hint.
+- [ ] **(Low)** "Stop on first error" toggle in the UI (the API supports it).
+
+---
+
+
+
 ### Phase 6: Production launch (≈3–4 days)
 
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).

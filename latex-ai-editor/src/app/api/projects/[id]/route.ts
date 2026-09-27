@@ -7,6 +7,8 @@ import { AppError } from "@/lib/errors";
 const UpdateProjectSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   content: z.string().optional(),
+  /** "auto" (engine chosen per compile, with fallback) or a forced engine. */
+  compiler: z.enum(["auto", "pdflatex", "xelatex", "lualatex"]).optional(),
 });
 
 type RouteParams = {

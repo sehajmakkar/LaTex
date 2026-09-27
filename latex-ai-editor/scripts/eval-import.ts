@@ -20,7 +20,7 @@ import { extractDocx, extractPdf } from "@/services/ats/extract";
 import { importWithAI } from "@/services/import/ai-import";
 import { renderResume } from "@/services/import/render";
 import { importTexFile, importZip } from "@/services/import/latex-import";
-import { compileWithEngineProbe } from "@/services/import/engine-probe";
+import { compileSmart } from "@/services/compile/smart-compile";
 
 const TEMPLATES = ["modern-tech", "chicago", "technical", "academic", "project-highlights"];
 
@@ -59,7 +59,7 @@ async function latexCase(path: string) {
   const buffer = readFileSync(path);
   try {
     const r = path.endsWith(".zip") ? await importZip(buffer) : importTexFile(buffer, basename(path));
-    const compiled = await compileWithEngineProbe(r.content);
+    const compiled = await compileSmart(r.content);
     console.log(
       `${compiled.ok ? "PASS" : "FAIL"} latex ${basename(path).padEnd(22)} main=${r.mainFile} embedded=[${r.embedded.join(", ")}] compiled=${compiled.ok}` +
         (compiled.ok

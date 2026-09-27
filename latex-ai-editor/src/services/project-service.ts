@@ -19,7 +19,7 @@ class ProjectService {
 
   async createForUser(
     userId: string,
-    data: { name: string; content: string; templateId: string | null }
+    data: { name: string; content: string; templateId: string | null; compiler?: string; lastEngine?: string | null }
   ) {
     const canCreate = await userService.canCreateProject(userId);
     if (!canCreate) {
@@ -46,6 +46,8 @@ class ProjectService {
       name: name?.trim() || copyName(source.name, taken),
       content: source.content,
       templateId: source.templateId,
+      compiler: source.compiler,
+      lastEngine: source.lastEngine,
     });
     if (source.thumbnailUpdatedAt) {
       await thumbnailService.copy(source.id, copy.id).catch((e) => console.error("Thumbnail not copied:", e));
@@ -54,7 +56,7 @@ class ProjectService {
     return copy;
   }
 
-  async update(id: string, userId: string, data: { name?: string; content?: string }) {
+  async update(id: string, userId: string, data: { name?: string; content?: string; compiler?: string }) {
     const existing = await projectRepository.findById(id);
     if (!existing) {
       throw new NotFoundError("Project");

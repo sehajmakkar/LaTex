@@ -133,13 +133,15 @@ function tail(text, maxBytes) {
  * that caps file size and CPU time. It gets its own process group so the
  * timeout kills latexmk and every engine it started.
  */
-function runLatexmk(workDir, engine, uid) {
+function runLatexmk(workDir, engine, uid, stopOnFirstError) {
   return new Promise((resolve) => {
     const args = [
       "-norc",
       ENGINE_FLAGS[engine],
       "-interaction=nonstopmode",
-      "-halt-on-error",
+      // Like Overleaf's default ("try to compile despite errors"): keep going and
+      // produce a PDF when possible. "Stop on first error" is opt-in.
+      stopOnFirstError ? "-halt-on-error" : "-f",
       "-file-line-error",
       "-no-shell-escape",
       "-silent",
@@ -211,6 +213,26 @@ function renderThumbnail(workDir, uid) {
   });
 }
 
+/**
+ * LaTeX errors from the log: "! message" lines and file:line:error lines
+ * (we run with -file-line-error). At most 20, in order.
+ */
+function parseErrors(log) {
+  const errors = [];
+  const lines = log.split("\n");
+  for (let i = 0; i < lines.length && errors.length < 20; i++) {
+    const line = lines[i];
+    const fileLine = /^(?:\.\/)?([^:\s][^:]*\.(?:tex|cls|sty|xtx|ltx)):(\d+): (.+)$/.exec(line);
+    if (fileLine) {
+      errors.push({ file: fileLine[1], line: Number(fileLine[2]), message: fileLine[3].trim() });
+    } else if (line.startsWith("! ")) {
+      const at = lines.slice(i + 1, i + 6).map((l) => /^l\.(\d+)/.exec(l)).find(Boolean);
+      errors.push({ file: null, line: at ? Number(at[1]) : null, message: line.slice(2).trim() });
+    }
+  }
+  return errors;
+}
+
 /** True if the compile hit the per-file size cap (the engine is killed by SIGXFSZ). */
 async function hitFileLimit(workDir) {
   const names = await readdir(workDir).catch(() => []);
@@ -222,7 +244,7 @@ async function hitFileLimit(workDir) {
   return false;
 }
 
-async function compile(content, engine, slot, wantThumbnail = false) {
+async function compile(content, engine, slot, wantThumbnail = false, stopOnFirstError = false) {
   const workDir = await mkdtemp(path.join(WORK_ROOT, "job-"));
   const uid = RUN_AS_TEX_USERS ? TEX_UID_BASE + slot : null;
   try {
@@ -234,7 +256,7 @@ async function compile(content, engine, slot, wantThumbnail = false) {
       await chown(texFile, uid, uid);
       await chmod(workDir, 0o700);
     }
-    const result = await runLatexmk(workDir, engine, uid);
+    const result = await runLatexmk(workDir, engine, uid, stopOnFirstError);
 
     const texLog = await readFile(path.join(workDir, "main.log"), "utf8").catch(() => "");
     const log = tail(texLog || result.output, MAX_LOG_BYTES);
@@ -248,14 +270,17 @@ async function compile(content, engine, slot, wantThumbnail = false) {
 
     const pdfPath = path.join(workDir, "main.pdf");
     const pdfStat = await stat(pdfPath).catch(() => null);
-    if (result.code !== 0 || !pdfStat) {
-      return { ok: false, reason: "error", log: log || result.output };
+    // Errors with a PDF still count as a result (unless stopping on the first error);
+    // the errors go back with it so the editor can show them.
+    if (!pdfStat || (result.code !== 0 && stopOnFirstError)) {
+      return { ok: false, reason: "error", log: log || result.output, errors: parseErrors(log) };
     }
     if (pdfStat.size > MAX_PDF_BYTES) {
       return { ok: false, reason: "limit", log: `${log}\n\nThe PDF is larger than ${MAX_PDF_BYTES / 1024 / 1024} MB.` };
     }
     const thumbnail = wantThumbnail ? await renderThumbnail(workDir, uid) : null;
-    return { ok: true, log, pdf: await readFile(pdfPath), thumbnail };
+    const errors = result.code === 0 ? [] : parseErrors(log);
+    return { ok: true, log, pdf: await readFile(pdfPath), thumbnail, errors };
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
@@ -293,6 +318,7 @@ app.post("/compile", async (req, res) => {
   }
   const engine = requestedEngine ?? detectEngine(content);
   const wantThumbnail = req.body?.thumbnail === true;
+  const stopOnFirstError = req.body?.stopOnFirstError === true;
 
   let slot;
   try {
@@ -307,16 +333,22 @@ app.post("/compile", async (req, res) => {
 
   const started = Date.now();
   try {
-    const result = await compile(content, engine, slot, wantThumbnail);
-    console.log(`compile engine=${engine} ok=${result.ok}${result.ok ? "" : ` reason=${result.reason}`} ms=${Date.now() - started}`);
+    const result = await compile(content, engine, slot, wantThumbnail, stopOnFirstError);
+    console.log(
+      `compile engine=${engine} ok=${result.ok}${result.ok ? ` errors=${result.errors.length}` : ` reason=${result.reason}`} ms=${Date.now() - started}`
+    );
     if (!result.ok) {
-      return res.status(422).json({ ok: false, error: "Compilation failed", reason: result.reason, engine, log: result.log });
+      return res
+        .status(422)
+        .json({ ok: false, error: "Compilation failed", reason: result.reason, engine, log: result.log, errors: result.errors ?? [] });
     }
     res.json({
       ok: true,
       engine,
       log: result.log,
       pdf: result.pdf.toString("base64"),
+      // Non-empty when the PDF was produced despite LaTeX errors.
+      errors: result.errors,
       ...(result.thumbnail ? { thumbnail: result.thumbnail.toString("base64") } : {}),
     });
   } catch (error) {

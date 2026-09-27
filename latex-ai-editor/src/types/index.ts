@@ -54,6 +54,8 @@ export type TemplateManifest = {
   source?: { author: string; url: string; license: string };
   /** Uses a photo (shown as an empty box until images are supported). */
   hasPhoto?: boolean;
+  /** The engine the template compiled with when imported; new resumes start with it. */
+  engine?: "pdflatex" | "xelatex" | "lualatex";
 };
 
 export type Template = TemplateManifest & {
