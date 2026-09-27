@@ -48,6 +48,12 @@ export type TemplateManifest = {
   category: string;
   tags: string[];
   variables: TemplateVariable[];
+  /** Preview image (public path). */
+  preview?: string;
+  /** Original author and license, for templates imported from their source. */
+  source?: { author: string; url: string; license: string };
+  /** Uses a photo (shown as an empty box until images are supported). */
+  hasPhoto?: boolean;
 };
 
 export type Template = TemplateManifest & {

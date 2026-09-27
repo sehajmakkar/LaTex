@@ -28,7 +28,7 @@ type TemplateCardProps = {
 };
 
 export function TemplateCard({ template, onUseTemplate, isCreating, ctaLabel = "Use template" }: TemplateCardProps) {
-  const imageUrl = TEMPLATE_IMAGES[template.id] || FALLBACK_PREVIEW_IMAGE;
+  const imageUrl = template.preview ?? TEMPLATE_IMAGES[template.id] ?? FALLBACK_PREVIEW_IMAGE;
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors duration-300 hover:border-ring/60">
@@ -50,9 +50,20 @@ export function TemplateCard({ template, onUseTemplate, isCreating, ctaLabel = "
         <h3 className="font-display text-sm font-semibold tracking-tight">
           {template.name}
         </h3>
-        <p className="mb-3 mt-1 line-clamp-2 text-xs text-muted-foreground">
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
           {template.description}
         </p>
+        {template.source && (
+          <p className="mt-2 truncate text-[11px] text-muted-foreground">
+            by{" "}
+            <a href={template.source.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-foreground">
+              {template.source.author}
+            </a>{" "}
+            · {template.source.license}
+          </p>
+        )}
+        {template.hasPhoto && <p className="mt-1 text-[11px] text-muted-foreground">Photo shows as an empty box for now.</p>}
+        <div className="mb-3" />
         <Button
           variant="secondary"
           size="sm"

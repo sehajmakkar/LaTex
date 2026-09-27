@@ -157,7 +157,7 @@ describe("LaTeX import", () => {
     expect(r.content).toContain("\\section{Experience} Engineer at Acme.");
     expect(r.content).toContain("% \\input{sections/old}");
     // Missing images become empty boxes instead of compile errors.
-    expect(r.content).toContain("\\IfFileExists{#2}");
+    expect(r.content).toContain("\\veroIncludegraphics");
     expect(r.content.indexOf("\\AtBeginDocument")).toBeLessThan(r.content.indexOf("\\begin{document}"));
     expect(r.warnings.join(" ")).toMatch(/Images .* empty boxes/);
     expect(r.content.indexOf("filecontents")).toBeLessThan(r.content.indexOf("\\documentclass"));

@@ -600,6 +600,27 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 
 
 
+### Phase 5d: Template catalog from the original sources ✅ (first batch)
+
+*27 Sep 2026. 14 templates live; batch paused for your review before adding more.*
+
+**Approach:** no hand-copied or generated LaTeX. Each template is downloaded from its original repository (pinned to a commit, or to a checksum for CTAN) and run through **the same importer users get for an Overleaf .zip**, then compiled on our service and previewed (`scripts/import-templates.ts`, sources in `scripts/templates/sources.ts`). Only redistributable licenses (MIT, Apache-2.0, LPPL-1.3c, CC-BY-4.0); repos without a license are left out. Each template starts with a credit comment (author, source, license; MIT templates carry their license text), and each card links the author.
+
+**Live (14):** Jake's Resume, sb2nov, Clean Developer Resume, Rover (base, office, academic), Awesome CV (resume + long CV), AltaCV, latexcv (classic, sidebar, two-column, rows, infographics). Sections: Most popular · Software engineering · Product & business · Academic & research · Students & new grads · Two-column · Creative.
+
+**Importer improvements found on the way** (help user imports too): symlinks in zips are resolved (Awesome-CV); `.xtx` main files; `root`/`main` options for multi-template repos; images inside class files are detected; missing images always become placeholder boxes (a name like `qrcode` matched TeX Live's qrcode package before).
+
+**Left out, with the reason recorded in `sources.ts`** (retried automatically when the reason goes away):
+- [ ] **(Medium, needs font files in projects)** Deedy Resume, McDowell CV (Times New Roman), billryan/resume, PlushCV: they ship font files. Same feature as images: multi-file compiles.
+- [ ] **(Medium, needs TeX Live 2024+)** moderncv 2.6.1 (Font Awesome 6), YAAC (`xetex-inputenc`). Also the newest Awesome-CV (pinned to the commit before Font Awesome 6).
+- [ ] **(Low)** Twenty Seconds CV compiles but its sidebar renders cut off; Resume NG's sample is in Chinese; cv-clean has an upstream bug (a stray `}`).
+- [ ] **(Low)** The compile service fails on any LaTeX error, while Overleaf still shows the PDF for recoverable errors. Consider returning the PDF with warnings when one was produced.
+- [ ] **(You)** Review the 14; decide whether to delete the 9 legacy hand-copied templates (hidden now, still open by id); pick the next batch (e.g. Overleaf gallery templates you download as .zip into `templates-src/`).
+
+---
+
+
+
 ### Phase 6: Production launch (≈3–4 days)
 
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).

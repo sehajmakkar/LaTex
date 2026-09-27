@@ -23,13 +23,22 @@ export class LatexImportError extends Error {}
 const SUPPORT_EXT = /\.(cls|sty|bib|bst|def|cfg|clo)$/i;
 const IMAGE_EXT = /\.(png|jpe?g|pdf|eps|svg|gif)$/i;
 const FONT_EXT = /\.(ttf|otf|pfb|woff2?)$/i;
-/** Makes \includegraphics draw an empty box for images that aren't available. */
-const IMAGE_FALLBACK = String.raw`% Vero: images from the original project aren't available yet; missing ones show as empty boxes.
+/**
+ * Makes \includegraphics draw an empty box: imported projects have no image
+ * files yet. (Checking whether a file exists isn't enough: `{qrcode}` would
+ * find TeX Live's unrelated qrcode package.) TeX Live's example-image files
+ * still work.
+ */
+const IMAGE_FALLBACK = String.raw`% Vero: images from the original project aren't available yet, so they show as empty boxes.
+\makeatletter
 \AtBeginDocument{%
   \ifdefined\includegraphics
     \let\veroIncludegraphics\includegraphics
-    \renewcommand{\includegraphics}[2][]{\IfFileExists{#2}{\veroIncludegraphics[#1]{#2}}{\fbox{\rule{0pt}{1.2cm}\rule{1.2cm}{0pt}}}}%
+    \renewcommand{\includegraphics}[2][]{%
+      \in@{example-image}{#2}%
+      \ifin@\veroIncludegraphics[#1]{#2}\else\fbox{\rule{0pt}{1.2cm}\rule{1.2cm}{0pt}}\fi}%
   \fi}
+\makeatother
 `;
 
 /** \input files that come with TeX Live rather than the project. */
@@ -89,9 +98,18 @@ export function pickMain(texFiles: Map<string, string>): string | null {
  * Builds a single compilable document from project files (paths → text).
  * `binaryNames` lists images/fonts that were in the project but can't be used.
  */
-export function buildFromProject(texts: Map<string, string>, binaryNames: string[] = []): LatexImport {
-  const texFiles = new Map([...texts].filter(([p]) => /\.(tex|ltx)$/i.test(p)));
-  const mainFile = pickMain(texFiles);
+export type ProjectOptions = {
+  /** Only use files under this folder (e.g. one template in a multi-template repo). */
+  root?: string;
+  /** The main .tex file (relative to `root`), instead of guessing. */
+  main?: string;
+  /** Use the TeX Live copy of these class/style files instead of embedding the project's (e.g. ["moderncv"]). */
+  useInstalled?: string[];
+};
+
+export function buildFromProject(texts: Map<string, string>, binaryNames: string[] = [], options: ProjectOptions = {}): LatexImport {
+  const texFiles = new Map([...texts].filter(([p]) => /\.(tex|ltx|xtx)$/i.test(p)));
+  const mainFile = options.main && texFiles.has(normalizePath(options.main)) ? normalizePath(options.main) : pickMain(texFiles);
   if (!mainFile) {
     throw new LatexImportError(
       "Couldn't find the main .tex file (one with \\documentclass and \\begin{document}). If your resume uses several files, upload the whole Overleaf project as a .zip."
@@ -111,6 +129,7 @@ export function buildFromProject(texts: Map<string, string>, binaryNames: string
   const byName = new Map<string, string>();
   for (const p of support) {
     const name = basename(p);
+    if (options.useInstalled?.some((stem) => name.startsWith(stem))) continue;
     if (byName.has(name)) warnings.push(`Two files are named ${name}; used ${byName.get(name)}.`);
     else byName.set(name, p);
   }
@@ -157,11 +176,13 @@ export function buildFromProject(texts: Map<string, string>, binaryNames: string
   // Images can't be carried over yet. Rather than deleting \includegraphics (which
   // class macros such as AltaCV's \photo call internally), any image that isn't
   // there is drawn as an empty box, so the layout survives.
-  const imageRefs = (doc.match(/\\includegraphics/g) ?? []).length + (doc.match(/\\photo[LR]?\s*(\[[^\]]*\])?\s*\{/g) ?? []).length;
+  // Uses in the document and in the class/style files it embeds (e.g. a \photo macro).
+  const imageSources = [doc, ...[...byName.values()].map((p) => texts.get(p) ?? "")].join("\n");
+  const imageRefs =
+    (imageSources.match(/\\includegraphics/g) ?? []).length + (doc.match(/\\photo[LR]?\s*(\[[^\]]*\])?\s*\{/g) ?? []).length;
   const beginDoc = doc.search(/^[^%\n]*\\begin\s*\{document\}/m);
-  const images = binaryNames.filter((n) => IMAGE_EXT.test(n));
   if (imageRefs && beginDoc !== -1) doc = doc.slice(0, beginDoc) + IMAGE_FALLBACK + doc.slice(beginDoc);
-  if (imageRefs || images.length) {
+  if (imageRefs) {
     warnings.push("Images (like a photo or logo) can't be imported yet, so they show as empty boxes. Remove them or keep the box as a placeholder.");
   }
   const fonts = binaryNames.filter((n) => FONT_EXT.test(n));
@@ -195,7 +216,7 @@ export function importTexFile(buffer: Buffer, fileName = "main.tex"): LatexImpor
   return buildFromProject(new Map([[fileName.replace(/[^\w.\- ]/g, "_") || "main.tex", text]]));
 }
 
-export async function importZip(buffer: Buffer): Promise<LatexImport> {
+export async function importZip(buffer: Buffer, options: ProjectOptions = {}): Promise<LatexImport> {
   let zip: JSZip;
   try {
     zip = await JSZip.loadAsync(buffer);
@@ -209,10 +230,17 @@ export async function importZip(buffer: Buffer): Promise<LatexImport> {
 
   const texts = new Map<string, string>();
   const binaries: string[] = [];
+  const symlinks = new Map<string, string>();
   let total = 0;
   for (const entry of entries) {
     const path = normalizePath(entry.name);
-    if (/\.(tex|ltx)$/i.test(path) || SUPPORT_EXT.test(path)) {
+    // Repos (e.g. GitHub downloads) can contain symlinks, stored as a file holding the target path.
+    const mode = typeof entry.unixPermissions === "number" ? entry.unixPermissions : 0;
+    if ((mode & 0o170000) === 0o120000) {
+      symlinks.set(path, normalizePath(`${dirname(path)}/${(await entry.async("string")).trim()}`));
+      continue;
+    }
+    if (/\.(tex|ltx|xtx)$/i.test(path) || SUPPORT_EXT.test(path)) {
       // Check the declared size before inflating, so a zip bomb is refused cheaply.
       const declared = (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize ?? 0;
       if (declared > MAX_TEXT_FILE) throw new LatexImportError(`${path} is too large to import.`);
@@ -224,6 +252,32 @@ export async function importZip(buffer: Buffer): Promise<LatexImport> {
       binaries.push(path);
     }
   }
+  for (const [link, target] of symlinks) {
+    if (texts.has(target)) texts.set(link, texts.get(target)!);
+    else if (binaries.includes(target)) binaries.push(link);
+  }
   // Overleaf zips often have everything inside one top folder; that's handled by relative paths.
-  return buildFromProject(texts, binaries);
+  // Scope to `root` when given (paths become relative to it). A zip from GitHub wraps
+  // everything in one "repo-sha/" folder, so `root` is matched below that too.
+  if (options.root) {
+    const root = normalizePath(options.root);
+    const top = [...texts.keys()][0]?.split("/")[0];
+    const prefixes = [`${root}/`, top ? `${top}/${root}/` : null].filter((x): x is string => !!x);
+    const scope = <T,>(entries: [string, T][]) =>
+      entries.flatMap(([p, v]) => {
+        const prefix = prefixes.find((x) => p.startsWith(x));
+        return prefix ? [[p.slice(prefix.length), v] as [string, T]] : [];
+      });
+    const scoped = new Map(scope([...texts.entries()]));
+    if (!scoped.size) throw new LatexImportError(`No files under ${root}/ in this zip.`);
+    return buildFromProject(scoped, scope(binaries.map((b) => [b, b] as [string, string])).map(([p]) => p), options);
+  }
+  if (options.main) {
+    // A GitHub zip's top folder: make `main` relative to it.
+    const top = [...texts.keys()][0]?.split("/")[0];
+    if (top && [...texts.keys()].every((p) => p.startsWith(`${top}/`))) {
+      return buildFromProject(new Map([...texts].map(([p, v]) => [p.slice(top.length + 1), v])), binaries, options);
+    }
+  }
+  return buildFromProject(texts, binaries, options);
 }

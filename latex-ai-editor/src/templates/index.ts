@@ -1,15 +1,16 @@
 /**
  * Template Registry
  *
- * How to add a new template:
- * 1. Create a file in the appropriate tag folder (e.g., top-picks/my-template.ts)
- *    that exports `manifest` (TemplateManifest) and `content` (string).
- * 2. Re-export it from that folder's index.ts barrel file.
- * 3. Import it below and add it to the ALL_TEMPLATES array.
- * 4. Done — it will appear on the templates page under its tags.
+ * The gallery shows the catalog: popular, openly licensed templates imported
+ * unchanged from their sources by `scripts/import-templates.ts` (edit
+ * `scripts/templates/sources.ts` and re-run it to add one).
+ *
+ * The older hand-copied templates below are "legacy": hidden from the gallery
+ * but still resolvable by id, so existing links and projects keep working.
  */
 
 import type { Template, TemplateManifest } from "@/types";
+import { CATALOG } from "./catalog";
 export { TEMPLATE_TAGS } from "./common";
 
 // --- Import all templates from tag-based folders ---
@@ -61,8 +62,8 @@ import {
   scholarlyContent,
 } from "./academic";
 
-// --- Template registry: add new templates here ---
-const ALL_TEMPLATES: { manifest: TemplateManifest; content: string }[] = [
+// --- Legacy (hand-copied) templates: resolvable by id, not listed ---
+const LEGACY_TEMPLATES: { manifest: TemplateManifest; content: string }[] = [
   // Existing templates
   { manifest: modernTechManifest, content: modernTechContent },
   { manifest: classicDevManifest, content: classicDevContent },
@@ -84,11 +85,11 @@ const ALL_TEMPLATES: { manifest: TemplateManifest; content: string }[] = [
   { manifest: scholarlyManifest, content: scholarlyContent },
 ];
 
-// Build lookup maps
+// Build lookup maps (catalog ids win over legacy ones)
 const MANIFEST_MAP: Record<string, TemplateManifest> = {};
 const CONTENT_MAP: Record<string, string> = {};
 
-for (const t of ALL_TEMPLATES) {
+for (const t of [...LEGACY_TEMPLATES, ...CATALOG]) {
   MANIFEST_MAP[t.manifest.id] = t.manifest;
   CONTENT_MAP[t.manifest.id] = t.content;
 }
@@ -99,8 +100,9 @@ export function getTemplateIds(): string[] {
   return Object.keys(MANIFEST_MAP);
 }
 
+/** Templates shown in the gallery: the imported catalog. */
 export function getTemplateManifests(): TemplateManifest[] {
-  return Object.values(MANIFEST_MAP);
+  return CATALOG.map((t) => t.manifest);
 }
 
 export function getTemplateById(id: string): Template | null {

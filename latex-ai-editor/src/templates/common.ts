@@ -11,13 +11,15 @@ export const COMMON_VARIABLES: TemplateVariable[] = [
   { key: "website", label: "Website", placeholder: "janedoe.dev" },
 ];
 
-/** Ordered list of filter tags shown in the dropdown. */
+/** Gallery sections, in order. Catalog templates are tagged with these (scripts/templates/sources.ts). */
 export const TEMPLATE_TAGS = [
-  "Top Picks",
-  "SDE 1",
-  "Single Column",
-  "Two Column",
-  "Leadership",
+  "Most popular",
+  "Software engineering",
+  "Product & business",
+  "Academic & research",
+  "Students & new grads",
+  "Two-column",
+  "Creative",
 ] as const;
 
 export type TemplateTag = (typeof TEMPLATE_TAGS)[number];

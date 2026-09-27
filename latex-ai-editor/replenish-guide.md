@@ -643,3 +643,43 @@ Restart `npm run dev`. No env or database changes.
 | 6 | | |
 | 7 | | |
 | 8 | | |
+
+---
+
+## Step: Phase 5d, template catalog from original sources (27 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Catalog | 14 popular templates imported **unchanged** from their original repos (pinned commits), compiled and previewed | `scripts/templates/sources.ts`, `scripts/import-templates.ts`, `src/templates/catalog/*`, `public/templates/catalog/*.webp` |
+| Gallery | Shows the catalog in 7 sections (Most popular, Software engineering, Product & business, Academic & research, Students & new grads, Two-column, Creative); cards show the real preview and credit the author + license | `src/templates/index.ts`, `common.ts`, `TemplateCard.tsx`, `src/types` |
+| Legacy | The 9 hand-copied templates are hidden from the gallery but still open by id | `src/templates/index.ts` |
+| Importer | Symlinks in zips, `.xtx`, root/main options, images in class files, placeholder boxes for all images | `src/services/import/latex-import.ts` |
+
+### What I already verified
+- All 14 compile on Railway (engine auto-picked; checked previews by eye).
+- `/api/templates` lists 14 with tags; `/api/templates/<id>` returns the content with the credit header; a legacy id still works; previews are served.
+- Unit tests 82/82, ESLint 0 errors, `npm run build`.
+
+### To rebuild or add templates
+`npx tsx --env-file=.env --tsconfig tsconfig.json scripts/import-templates.ts` (all) or `--only id,id`. Add an entry in `scripts/templates/sources.ts` first. Needs macOS (`sips`) for previews.
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | `/templates` | 7 sections; real previews; "by Author · License" under each |
+| 2 | Filter "Academic & research" | Awesome CV (Long CV), AltaCV, Rover Academic |
+| 3 | Use **Awesome CV (Resume)** → Compile | Same look as the preview (xelatex picked automatically) |
+| 4 | Use **AltaCV** → Compile | Two-column CV; the photo is an empty box |
+| 5 | Use **Jake's Resume** | Credit + MIT license comment at the top of the LaTeX |
+| 6 | Open an old link like `/sign-up?intent=template:chicago` | Still creates the (legacy) Chicago resume |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
