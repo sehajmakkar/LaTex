@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { AppError, UsageLimitError } from "@/lib/errors";
 import { isGeminiConfigured } from "@/lib/gemini";
@@ -13,6 +13,7 @@ import { importTexFile, importZip, LatexImportError, type LatexImport } from "@/
 import { importWithAI } from "@/services/import/ai-import";
 import { compileWithEngineProbe } from "@/services/import/engine-probe";
 import { compileLatex } from "@/services/compile-service";
+import { thumbnailService } from "@/services/thumbnail-service";
 import { renderResume, unsupportedChars } from "@/services/import/render";
 import { resumeStrings } from "@/services/import/resume-data";
 import type { ImportReport } from "@/services/import/types";
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
         if (e instanceof LatexImportError) return error("INVALID_PROJECT", e.message, 422);
         throw e;
       }
-      const probe = await compileWithEngineProbe(result.content);
+      const probe = await compileWithEngineProbe(result.content, { thumbnail: true });
       const project = await projectService.createForUser(userId, { name: titleFrom(fileName), content: probe.content, templateId: null });
       const report: ImportReport = {
         method: "latex",
@@ -111,6 +112,8 @@ export async function POST(req: NextRequest) {
           : (probe.log ?? "").split("\n").find((l) => /^!|:\d+: /.test(l))?.slice(0, 300) ?? probe.message,
       };
       console.log(JSON.stringify({ event: "import", userId, method: "latex", fileType, embedded: result.embedded.length, warnings: result.warnings.length }));
+      const thumb = probe.ok ? probe.thumbnail : undefined;
+      if (thumb) after(() => thumbnailService.save(project.id, thumb).catch((e) => console.error("Thumbnail not saved:", e)));
       const pdfUrl = probe.ok ? `data:application/pdf;base64,${probe.pdf.toString("base64")}` : null;
       return NextResponse.json({ data: { projectId: project.id, name: project.name, report, pdfUrl } }, { status: 201 });
     }
@@ -159,7 +162,7 @@ export async function POST(req: NextRequest) {
       content = `% CHECK THESE: they weren't found word-for-word in your file.\n${list.join("\n")}\n${content}`;
     }
     // The renderer escapes everything, so this should always compile; check anyway.
-    const compiled = await compileLatex(content);
+    const compiled = await compileLatex(content, undefined, { thumbnail: true });
     const project = await projectService.createForUser(userId, {
       name: result.data.name.trim() ? `${result.data.name.trim().slice(0, 60)} (imported)` : titleFrom(fileName),
       content,
@@ -199,6 +202,8 @@ export async function POST(req: NextRequest) {
         compiles: compiled.ok,
       })
     );
+    const aiThumb = compiled.ok ? compiled.thumbnail : undefined;
+    if (aiThumb) after(() => thumbnailService.save(project.id, aiThumb).catch((e) => console.error("Thumbnail not saved:", e)));
     const pdfUrl = compiled.ok ? `data:application/pdf;base64,${compiled.pdf.toString("base64")}` : null;
     return NextResponse.json({ data: { projectId: project.id, name: project.name, report, pdfUrl } }, { status: 201 });
   } catch (e) {

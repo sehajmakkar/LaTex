@@ -683,3 +683,84 @@ Restart `npm run dev`. No env or database changes.
 | 4 | | |
 | 5 | | |
 | 6 | | |
+
+---
+
+## Step: Phase 5e, real resume thumbnails on the dashboard (27 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Compile service | `thumbnail: true` → also returns page 1 as PNG (`pdftoppm`, sandboxed, 5 s cap). Image: `poppler-utils` in its own layer (+21 MB) | `latex-service/server.js`, `latex-service/Dockerfile` |
+| App | `/api/compile` and imports save the thumbnail to R2 (WebP) after responding; owner-only `GET /api/projects/[id]/thumbnail`; duplicate copies it, delete removes it | `src/app/api/compile/route.ts`, `src/services/thumbnail-service.ts`, `src/services/storage/r2.ts`, `src/app/api/projects/[id]/thumbnail/route.ts`, `project-service.ts`, import route |
+| Data | `projects.thumbnail_updated_at` (**already applied to Neon**) | `schema.ts`, `drizzle/manual/2026-09-27-project-thumbnails.sql` |
+| Dashboard | Card shows the resume's own first page, or its template's preview until the first compile | `src/app/(app)/dashboard/page.tsx`, `src/templates/index.ts`, `/api/projects` |
+
+### What I already verified
+- New service image built locally (Docker, same TeX Live layer): thumbnail returned only when asked, never on a failed compile, works for xelatex templates; +0.1–0.4 s.
+- **End-to-end 11/11** (local new service + dev server, temporary users, deleted afterwards): template preview before a compile; old Railway service → PDF still works, no thumbnail; new service → WebP saved (~31 KB) without changing "Edited …"; owner gets it, others 404; duplicate copies it; delete removes it from R2.
+- Unit tests 82/82, ESLint 0 errors, `npm run build`.
+
+### Setup (you)
+1. Redeploy the compile service (it isn't connected to GitHub):
+   ```bash
+   cd latex-ai-editor/latex-service
+   railway up
+   ```
+   The build takes a few minutes (TeX Live is large). Keep `LATEX_API_SECRET` as is.
+2. Check it's up: `curl https://<your-railway-url>/health` → `"status":"ok"`.
+3. Restart `npm run dev` (new route + DB column already in place).
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | Before `railway up`: open the dashboard | Cards show template previews with "Compile to see your resume"; compiling still works |
+| 2 | After `railway up`: open a resume → Compile → back to the dashboard | That card shows your resume's first page |
+| 3 | Edit + compile again → dashboard | The card updates (new version, no stale image) |
+| 4 | Make a copy of it | The copy's card shows the same page right away |
+| 5 | Import a PDF or Overleaf .zip → dashboard | The new card already shows the imported resume |
+| 6 | During an AI diff, press Compile (preview) → dashboard | The card doesn't show the unsaved AI version |
+| 7 | Dark mode | Pages sit on a light frame, readable |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |
+| 5 | | |
+| 6 | | |
+| 7 | | |
+
+---
+
+## Step: Card redesigns (27 Sep 2026)
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Dashboard cards | Shorter card (16:9 image area instead of 4:3); the resume page is wider (~88% of the card) and starts lower, so the card shows the top of the resume and the footer cuts the rest | `src/app/(app)/dashboard/page.tsx` |
+| Template cards | 3 columns max (was 4), so cards are wider; 4:3 preview showing the top of the page with a fade (was the full A4 page, very tall); **Preview** opens the full page in a dialog with "Use template"; "Photo" badge | `src/components/templates/TemplateCard.tsx`, `src/app/(app)/templates/page.tsx` |
+
+Why: galleries like Overleaf's use 3 wide columns with cropped previews; builders show the full page on demand. Cards went from a tall full-page tile to 349 × 423 px on desktop.
+
+### What I already verified
+- Screenshots of `/templates` on desktop and mobile, and the preview dialog: layout, fade, buttons.
+- ESLint 0 errors, `npm run build`.
+
+### Test checklist (browser)
+| # | Check | Expected |
+|---|---|---|
+| 1 | Dashboard | Cards look like the template cards: top of your resume with a fade; name, "Edited …" and ⋯ below |
+| 2 | `/templates` on desktop | 3 columns; top of each page with a soft fade |
+| 3 | Click a preview or **Preview** | Dialog with the full page; **Use template** works from there |
+| 4 | Phone width | One column; dialog fits the screen and scrolls |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |

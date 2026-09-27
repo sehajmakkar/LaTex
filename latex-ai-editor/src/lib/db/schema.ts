@@ -20,6 +20,8 @@ export const projects = pgTable("projects", {
   content: text("content").notNull().default(""),
   userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
   templateId: text("template_id"),
+  /** When the dashboard thumbnail (R2: thumbnails/<id>.webp) was last rendered; null = none yet. */
+  thumbnailUpdatedAt: timestamp("thumbnail_updated_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

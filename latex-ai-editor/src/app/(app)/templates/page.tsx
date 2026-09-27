@@ -106,9 +106,9 @@ export default function TemplatesPage() {
       )}
 
       {templates === null ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }, (_, i) => (
-            <Skeleton key={i} className="aspect-[210/330] rounded-xl" />
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="aspect-[6/7] rounded-xl" />
           ))}
         </div>
       ) : templates.length === 0 ? (
@@ -118,7 +118,7 @@ export default function TemplatesPage() {
           {sections.map((section) => (
             <section key={section.heading}>
               {filter === ALL && <h2 className="mb-4 font-heading text-base font-semibold">{section.heading}</h2>}
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {section.items.map((template) => (
                   <TemplateCard
                     key={`${section.heading}-${template.id}`}

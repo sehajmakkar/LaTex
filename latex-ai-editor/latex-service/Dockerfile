@@ -24,6 +24,10 @@ RUN apk add --no-cache \
       fontconfig freetype font-liberation font-dejavu font-carlito \
       nodejs tini
 
+# poppler's pdftoppm renders first-page thumbnails for the dashboard. Its own
+# layer, so adding it doesn't invalidate the cached TeX Live layer above.
+RUN apk add --no-cache poppler-utils
+
 # Let xelatex/lualatex find TeX Live's own OpenType/TrueType fonts by name
 # (Alpine doesn't ship TeX Live's fontconfig file), and build the font caches
 # now so the first compile is fast and stays within 512 MB of RAM.

@@ -17,20 +17,24 @@ export type CompileFailureCode =
   | "COMPILE_BUSY";
 
 export type CompileResult =
-  | { ok: true; pdf: Buffer; log: string; engine: string }
+  | { ok: true; pdf: Buffer; log: string; engine: string; /** First page as PNG, when asked for and supported. */ thumbnail?: Buffer }
   | { ok: false; code: CompileFailureCode; message: string; log?: string; engine?: string; status?: number };
 
 /**
  * Compiles a LaTeX document to PDF: on the remote compile service when
  * LATEX_SERVICE_URL is set (production), otherwise with the local TeX install.
  */
-export async function compileLatex(content: string, requestedEngine?: LatexEngine): Promise<CompileResult> {
+export async function compileLatex(
+  content: string,
+  requestedEngine?: LatexEngine,
+  options: { thumbnail?: boolean } = {}
+): Promise<CompileResult> {
   const engine = requestedEngine ?? detectEngine(content);
   const serviceBase = env.LATEX_SERVICE_URL?.replace(/\/$/, "");
-  return serviceBase ? compileRemote(serviceBase, content, engine) : compileLocal(content, engine);
+  return serviceBase ? compileRemote(serviceBase, content, engine, !!options.thumbnail) : compileLocal(content, engine);
 }
 
-async function compileRemote(serviceBase: string, content: string, engine: LatexEngine): Promise<CompileResult> {
+async function compileRemote(serviceBase: string, content: string, engine: LatexEngine, thumbnail: boolean): Promise<CompileResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), COMPILE_TIMEOUT_MS + REMOTE_FETCH_BUFFER_MS);
   try {
@@ -40,7 +44,8 @@ async function compileRemote(serviceBase: string, content: string, engine: Latex
     const response = await fetch(`${serviceBase}/compile`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ content, engine }),
+      // Services without thumbnail support ignore the flag.
+      body: JSON.stringify({ content, engine, ...(thumbnail ? { thumbnail: true } : {}) }),
       signal: controller.signal,
     });
     const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
@@ -74,6 +79,7 @@ async function compileRemote(serviceBase: string, content: string, engine: Latex
       pdf: Buffer.from(body.pdf, "base64"),
       log: typeof body.log === "string" ? body.log : "",
       engine: typeof body.engine === "string" ? body.engine : engine,
+      thumbnail: typeof body.thumbnail === "string" ? Buffer.from(body.thumbnail, "base64") : undefined,
     };
   } catch (error) {
     const aborted = error instanceof Error && error.name === "AbortError";

@@ -2,6 +2,7 @@ import { projectRepository } from "@/repositories/project-repository";
 import { userService, FREE_PROJECT_LIMIT } from "@/services/user-service";
 import { NotFoundError, ProjectLimitError } from "@/lib/errors";
 import { copyName } from "@/lib/project-names";
+import { thumbnailService } from "@/services/thumbnail-service";
 
 class ProjectService {
   async getById(id: string) {
@@ -41,11 +42,16 @@ class ProjectService {
     const source = await projectRepository.findById(id);
     if (!source || source.userId !== userId) throw new NotFoundError("Project");
     const taken = name ? [] : (await projectRepository.findByUserId(userId)).map((p) => p.name);
-    return this.createForUser(userId, {
+    const copy = await this.createForUser(userId, {
       name: name?.trim() || copyName(source.name, taken),
       content: source.content,
       templateId: source.templateId,
     });
+    if (source.thumbnailUpdatedAt) {
+      await thumbnailService.copy(source.id, copy.id).catch((e) => console.error("Thumbnail not copied:", e));
+      return { ...copy, thumbnailUpdatedAt: new Date() };
+    }
+    return copy;
   }
 
   async update(id: string, userId: string, data: { name?: string; content?: string }) {
@@ -67,7 +73,8 @@ class ProjectService {
     if (existing.userId !== userId) {
       throw new NotFoundError("Project");
     }
-    return projectRepository.delete(id);
+    await projectRepository.delete(id);
+    if (existing.thumbnailUpdatedAt) await thumbnailService.remove(id).catch((e) => console.error("Thumbnail not deleted:", e));
   }
 }
 

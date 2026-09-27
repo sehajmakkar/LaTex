@@ -85,6 +85,28 @@ const LEGACY_TEMPLATES: { manifest: TemplateManifest; content: string }[] = [
   { manifest: scholarlyManifest, content: scholarlyContent },
 ];
 
+// Preview images of the legacy templates (the catalog's are in their manifests).
+const LEGACY_PREVIEWS: Record<string, string> = {
+  academic: "/templates/academic-template.jpg",
+  chicago: "/templates/chicago-template.jpg",
+  classic: "/templates/classic-template.jpg",
+  geometric: "/templates/geometric-template.avif",
+  milano: "/templates/milano-template.jpg",
+  "project-highlights": "/templates/project-highlights-template.jpg",
+  scholarly: "/templates/scholarly-template.jpg",
+  simple: "/templates/simple-template.jpg",
+  technical: "/templates/technical-template.jpg",
+};
+
+/** Blank resumes and AI imports use the Jake's layout. */
+export const DEFAULT_PREVIEW = "/templates/catalog/jakes-resume.webp";
+
+/** Preview image for a resume made from `templateId` (or the default layout). */
+export function getTemplatePreview(templateId: string | null | undefined): string {
+  if (!templateId) return DEFAULT_PREVIEW;
+  return MANIFEST_MAP[templateId]?.preview ?? LEGACY_PREVIEWS[templateId] ?? DEFAULT_PREVIEW;
+}
+
 // Build lookup maps (catalog ids win over legacy ones)
 const MANIFEST_MAP: Record<string, TemplateManifest> = {};
 const CONTENT_MAP: Record<string, string> = {};

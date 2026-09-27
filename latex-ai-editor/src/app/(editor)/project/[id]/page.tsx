@@ -134,7 +134,8 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         const response = await fetch("/api/compile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId: id, content: source }),
+          // A preview of unsaved AI changes shouldn't become the dashboard thumbnail.
+          body: JSON.stringify({ projectId: id, content: source, thumbnail: save }),
         });
         const body = await response.json().catch(() => null);
         if (!response.ok) {

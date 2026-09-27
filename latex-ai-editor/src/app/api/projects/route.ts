@@ -4,6 +4,7 @@ import { z } from "zod";
 import { projectService } from "@/services/project-service";
 import { userService } from "@/services/user-service";
 import { AppError, ProjectLimitError } from "@/lib/errors";
+import { getTemplatePreview } from "@/templates";
 
 const CreateProjectSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -26,7 +27,8 @@ export async function GET() {
     const user = await userService.ensureUser(userId, email, name);
     const projects = await projectService.getByUserId(userId);
     return NextResponse.json({
-      data: projects,
+      // The dashboard shows the resume's own thumbnail, or its template's preview until the first compile.
+      data: projects.map((p) => ({ ...p, templatePreview: getTemplatePreview(p.templateId) })),
       plan: user?.plan ?? "free",
     });
   } catch (error) {

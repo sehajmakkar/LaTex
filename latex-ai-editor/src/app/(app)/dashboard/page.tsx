@@ -48,6 +48,10 @@ type Project = {
   name: string;
   createdAt: string;
   updatedAt: string;
+  /** Set once the resume has compiled; its first page is the card image. */
+  thumbnailUpdatedAt?: string | null;
+  /** The template's preview, shown until the first compile. */
+  templatePreview?: string;
 };
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
@@ -67,16 +71,36 @@ function editedAgo(iso: string) {
   return "just now";
 }
 
-function ResumeTile() {
+const DEFAULT_PREVIEW = "/templates/catalog/jakes-resume.webp";
+
+/**
+ * The card image: the resume's own first page (from its last compile), or its
+ * template's preview until it has been compiled.
+ */
+function ResumeThumb({ project }: { project: Project }) {
+  const own = project.thumbnailUpdatedAt
+    ? `/api/projects/${project.id}/thumbnail?v=${new Date(project.thumbnailUpdatedAt).getTime()}`
+    : null;
+  const [failed, setFailed] = useState(false);
+  const src = own && !failed ? own : (project.templatePreview ?? DEFAULT_PREVIEW);
+  const isOwn = src === own;
   return (
-    <div className="flex aspect-[4/3] items-start justify-center overflow-hidden rounded-t-xl border-b bg-muted/50 px-8 pt-6">
-      <div className="flex h-full w-full max-w-[150px] flex-col gap-1.5 rounded-t-md bg-background p-3 shadow-sm ring-1 ring-border">
-        <div className="mx-auto h-1.5 w-1/2 rounded-full bg-foreground/60" />
-        <div className="mx-auto mb-1 h-1 w-2/3 rounded-full bg-muted-foreground/30" />
-        {[0.9, 0.75, 0.85, 0.6, 0.8, 0.7].map((w, i) => (
-          <div key={i} className="h-1 rounded-full bg-muted-foreground/20" style={{ width: `${w * 100}%` }} />
-        ))}
-      </div>
+    // Same frame as the template gallery cards: the top of the page, with a fade where it's cut off.
+    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-xl border-b bg-muted/50 px-[7%] pt-5">
+      {/* eslint-disable-next-line @next/next/no-img-element -- private, per-user image served by our API */}
+      <img
+        src={src}
+        alt={isOwn ? `First page of ${project.name}` : "Template preview"}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="aspect-[210/297] w-full rounded-t-md bg-white object-cover object-top shadow-sm ring-1 ring-border transition-transform duration-500 group-hover:-translate-y-1.5"
+      />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent" />
+      {!isOwn && (
+        <span className="absolute left-3 top-3 rounded-full bg-background/90 px-2 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border">
+          Compile to see your resume
+        </span>
+      )}
     </div>
   );
 }
@@ -259,7 +283,7 @@ function ResumesPage() {
       {projects === null ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="aspect-[4/3.6] rounded-xl" />
+            <Skeleton key={i} className="aspect-square rounded-xl" />
           ))}
         </div>
       ) : projects.length === 0 ? (
@@ -298,9 +322,12 @@ function ResumesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <div key={project.id} className="group relative flex flex-col rounded-xl border bg-card transition-colors hover:border-ring/60">
+            <div
+              key={project.id}
+              className="group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-[border-color,box-shadow] duration-300 hover:border-ring/60 hover:shadow-md"
+            >
               <Link href={`/project/${project.id}`} aria-label={`Open ${project.name}`}>
-                <ResumeTile />
+                <ResumeThumb project={project} />
               </Link>
               <div className="flex items-center gap-2 p-3">
                 <div className="min-w-0 flex-1">

@@ -621,6 +621,25 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 
 
 
+### Phase 5e: Real resume thumbnails on the dashboard ✅ (needs `railway up`)
+
+*27 Sep 2026. End-to-end 11/11 against the new compile service in local Docker. Steps are in `replenish-guide.md`.*
+
+- [x] **Compile service:** returns a first-page PNG when asked (`thumbnail: true`), rendered by poppler's `pdftoppm` as the job's sandbox user with a 5 s timeout (~0.1–0.4 s). Never fails a compile. `poppler-utils` adds **21 MB** in its own image layer.
+- [x] **App:** `/api/compile` asks for a thumbnail when the signed-in user owns the project (checked in parallel with the compile), and saves it **after the response** (`after()`), so compiles aren't slower. Stored privately in R2 as WebP (~30 KB, `thumbnails/<id>.webp`); `projects.thumbnail_updated_at` versions the URL (applied to Neon: `drizzle/manual/2026-09-27-project-thumbnails.sql`). Imports save one too.
+- [x] `GET /api/projects/[id]/thumbnail`: owner only, cached per version. Duplicate copies it; delete removes it. Previews of unsaved AI changes don't update it.
+- [x] **Dashboard card:** the resume's own first page; until its first compile, its template's preview (catalog/legacy image, or Jake's for blank resumes and AI imports) with a "Compile to see your resume" tag.
+- [x] Works before the redeploy: the old service ignores the flag, so cards show template previews.
+
+**Follow-ups:**
+- [ ] **(You)** `railway up` from `latex-service/` (see guide), then check the dashboard after a compile.
+- [ ] **(Medium, Phase 6)** Deleting a user (data deletion) must also delete their R2 thumbnails and ATS files, not just DB rows.
+- [ ] **(Low)** Existing resumes get a thumbnail on their next compile; no backfill job.
+
+---
+
+
+
 ### Phase 6: Production launch (≈3–4 days)
 
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).

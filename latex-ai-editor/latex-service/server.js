@@ -19,6 +19,7 @@ const int = (name, fallback) => {
 
 const PORT = int("PORT", 8080);
 const COMPILE_TIMEOUT_MS = int("COMPILE_TIMEOUT_MS", 60_000);
+const THUMBNAIL_TIMEOUT_MS = 5_000;
 /** Each concurrent slot compiles as its own user (texjob0…7, see Dockerfile). */
 const TEX_UID_BASE = 20000;
 const TEX_USERS = 8;
@@ -185,6 +186,31 @@ function runLatexmk(workDir, engine, uid) {
   });
 }
 
+/**
+ * Renders page 1 of the PDF to a small PNG (600 px wide) for dashboard
+ * thumbnails. Runs as the job's user with a short timeout; returns null if
+ * pdftoppm is missing or fails, so a thumbnail never fails a compile.
+ */
+function renderThumbnail(workDir, uid) {
+  return new Promise((resolve) => {
+    const proc = spawn(
+      "pdftoppm",
+      ["-png", "-f", "1", "-l", "1", "-singlefile", "-scale-to-x", "600", "-scale-to-y", "-1", "main.pdf", "thumb"],
+      { cwd: workDir, stdio: "ignore", ...(uid != null ? { uid, gid: uid } : {}) }
+    );
+    const timer = setTimeout(() => proc.kill("SIGKILL"), THUMBNAIL_TIMEOUT_MS);
+    proc.on("error", () => {
+      clearTimeout(timer);
+      resolve(null);
+    });
+    proc.on("close", async (code) => {
+      clearTimeout(timer);
+      if (code !== 0) return resolve(null);
+      resolve(await readFile(path.join(workDir, "thumb.png")).catch(() => null));
+    });
+  });
+}
+
 /** True if the compile hit the per-file size cap (the engine is killed by SIGXFSZ). */
 async function hitFileLimit(workDir) {
   const names = await readdir(workDir).catch(() => []);
@@ -196,7 +222,7 @@ async function hitFileLimit(workDir) {
   return false;
 }
 
-async function compile(content, engine, slot) {
+async function compile(content, engine, slot, wantThumbnail = false) {
   const workDir = await mkdtemp(path.join(WORK_ROOT, "job-"));
   const uid = RUN_AS_TEX_USERS ? TEX_UID_BASE + slot : null;
   try {
@@ -228,7 +254,8 @@ async function compile(content, engine, slot) {
     if (pdfStat.size > MAX_PDF_BYTES) {
       return { ok: false, reason: "limit", log: `${log}\n\nThe PDF is larger than ${MAX_PDF_BYTES / 1024 / 1024} MB.` };
     }
-    return { ok: true, log, pdf: await readFile(pdfPath) };
+    const thumbnail = wantThumbnail ? await renderThumbnail(workDir, uid) : null;
+    return { ok: true, log, pdf: await readFile(pdfPath), thumbnail };
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
@@ -265,6 +292,7 @@ app.post("/compile", async (req, res) => {
     requestedEngine = undefined;
   }
   const engine = requestedEngine ?? detectEngine(content);
+  const wantThumbnail = req.body?.thumbnail === true;
 
   let slot;
   try {
@@ -279,12 +307,18 @@ app.post("/compile", async (req, res) => {
 
   const started = Date.now();
   try {
-    const result = await compile(content, engine, slot);
+    const result = await compile(content, engine, slot, wantThumbnail);
     console.log(`compile engine=${engine} ok=${result.ok}${result.ok ? "" : ` reason=${result.reason}`} ms=${Date.now() - started}`);
     if (!result.ok) {
       return res.status(422).json({ ok: false, error: "Compilation failed", reason: result.reason, engine, log: result.log });
     }
-    res.json({ ok: true, engine, log: result.log, pdf: result.pdf.toString("base64") });
+    res.json({
+      ok: true,
+      engine,
+      log: result.log,
+      pdf: result.pdf.toString("base64"),
+      ...(result.thumbnail ? { thumbnail: result.thumbnail.toString("base64") } : {}),
+    });
   } catch (error) {
     console.error("Compile error:", error);
     res.status(500).json({ ok: false, error: "Internal server error" });

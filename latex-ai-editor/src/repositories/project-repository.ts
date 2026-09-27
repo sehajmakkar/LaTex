@@ -36,6 +36,11 @@ class ProjectRepository {
     return project;
   }
 
+  /** Records a new thumbnail without touching updatedAt (compiling isn't an edit). */
+  async setThumbnailUpdatedAt(id: string, at: Date | null) {
+    await db.update(projects).set({ thumbnailUpdatedAt: at }).where(eq(projects.id, id));
+  }
+
   async delete(id: string) {
     await db.delete(projects).where(eq(projects.id, id));
   }

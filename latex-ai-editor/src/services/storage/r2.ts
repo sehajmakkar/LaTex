@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "@/lib/env";
 
 const hasR2Config =
@@ -51,3 +51,15 @@ export async function getResumeObject(params: { key: string }) {
   return res;
 }
 
+
+export async function deleteResumeObject(params: { key: string }): Promise<void> {
+  if (!r2Client) return;
+  await r2Client.send(new DeleteObjectCommand({ Bucket: env.R2_BUCKET_NAME!, Key: params.key }));
+}
+
+export async function copyResumeObject(params: { from: string; to: string }): Promise<void> {
+  if (!r2Client) return;
+  await r2Client.send(
+    new CopyObjectCommand({ Bucket: env.R2_BUCKET_NAME!, CopySource: `${env.R2_BUCKET_NAME}/${params.from}`, Key: params.to })
+  );
+}
