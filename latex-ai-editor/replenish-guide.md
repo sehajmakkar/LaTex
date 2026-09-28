@@ -1229,3 +1229,29 @@ Dodo Payments (merchant of record) reviews these pages during verification. Befo
 - [ ] "Start Writing Free" and "See how it works" still work.
 - [ ] Phone width: the effect sits below the buttons.
 - [ ] With Reduce motion on: static field, no animation.
+
+---
+
+## Step: Hero polish: real LaTeX logo, avatar stack, horseshoe (29 Sep 2026)
+
+### What changed (in `marketing/`)
+- **Headline:** "Cursor for LaTex" now ends in the real LaTeX logo, with its raised A and lowered E in Computer Modern.
+  - It was typeset by TeX (`\LaTeX`) and exported as SVG paths with `latex` + `dvisvgm --no-fonts`, so no font download is needed.
+  - The data is in `components/brand/latex-logo-paths.ts`, and `components/brand/latex-logo.tsx` renders it.
+  - Its capitals match Cal Sans' cap height, it sits on the text baseline, and screen readers read "LaTeX".
+  - `<LatexLogo weight="bold" />` switches to the bold Computer Modern version if the regular one looks too light next to Cal Sans.
+- **Avatar stack** above the heading (`components/ui/avatar-stack.tsx`):
+  - 5 small (28 px) faces and a "+10" chip, fanning only slightly on hover.
+  - The faces are illustrations: "Notionists" by Zoish, CC0 1.0, self-hosted in `public/avatars/`. They aren't photos of people.
+  - There are no names or tooltips, and it's hidden from screen readers.
+- **Layout:** the hero copy sits higher (more bottom padding).
+- **The LaTeX field is now a full horseshoe:**
+  - an elliptical clear area anchored at the top edge covers the copy down to just below the CTA;
+  - the field fills both sides from top to bottom and the whole band below;
+  - the edges are feathered.
+
+### Test checklist (browser, http://localhost:3001)
+- [ ] The heading reads "Cursor for" + the LaTeX logo, which lines up with the baseline and doesn't collide with the second line (desktop and phone).
+- [ ] Avatars: small, and they fan a little on hover. "+10" is readable.
+- [ ] The LaTeX field wraps the copy like a horseshoe, with nothing behind the headline, subheadline or buttons, and soft edges.
+- [ ] Both CTA buttons still work.

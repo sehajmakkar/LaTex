@@ -95,18 +95,17 @@ export function LatexFluid({ clearRef, className }: Props) {
       const box = wrap.getBoundingClientRect()
       const r = clear.getBoundingClientRect()
       const cx = r.left - box.left + r.width / 2
-      const cy = r.top - box.top + r.height / 2
-      const rx = r.width / 2 + Math.min(140, box.width * 0.08)
-      const ry = r.height / 2 + 70
-      // Wide screens: the effect rises up both sides of the copy, fully there just below the CTA.
-      // Narrow screens: the copy spans the width, so the effect only starts below the CTA.
-      const narrow = box.width < 640
-      const fadeStart = r.top - box.top + (narrow ? r.height - 8 : r.height * 0.35)
-      const fadeEnd = r.bottom - box.top + (narrow ? 70 : 30)
+      // A horseshoe: an elliptical hole anchored at the top edge, wide enough for the copy and
+      // reaching just below the CTA. Everything outside it (both sides, top to bottom, and the band
+      // under the CTA) shows the field; the ellipse's edge is feathered.
+      // The clear core covers the copy plus a margin; the feather sits outside it.
+      const CORE = 0.82
+      const rx = (r.width / 2 + Math.min(90, box.width * 0.05)) / CORE
+      const ry = (r.bottom - box.top + 50) / CORE
       const masks = [
-        `radial-gradient(${rx}px ${ry}px at ${cx}px ${cy}px, transparent 55%, #000 100%)`,
-        `linear-gradient(to bottom, transparent ${fadeStart}px, #000 ${fadeEnd}px)`,
-        `linear-gradient(to top, transparent 0px, #000 90px)`,
+        `radial-gradient(${rx}px ${ry}px at ${cx}px 0px, transparent ${CORE * 100}%, #000 100%)`,
+        // soft top (behind the navbar) and bottom (into the next section) edges
+        `linear-gradient(to bottom, transparent 0px, #000 110px, #000 calc(100% - 90px), transparent 100%)`,
       ].join(", ")
       wrap.style.maskImage = masks
       wrap.style.webkitMaskImage = masks
