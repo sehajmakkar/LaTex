@@ -1069,3 +1069,23 @@ Found while making the launch video: "Tailor to a job" on Jake's resume came bac
 ### Test checklist (browser)
 - [ ] Open a Jake's resume, click **Tailor to a job**, paste a backend job post, and send. You should get a diff with several changes, not "no changes".
 - [ ] Select a `\resumeItem{...}` line, press ⌘K, and ask "make it more concise". The edit applies.
+
+---
+
+## Step: New "\V" logo and the animated navbar logo (landing page, 28 Sep 2026)
+
+### What changed (in `marketing/`)
+- `public/brand/vero-mark.svg` (`\V`) and `public/brand/vero-wordmark.svg` (`\Vero`): built from the real Cal Sans outlines, with Cal Sans kerning. The backslash is drawn to match the V rather than using Cal Sans' own `\`, which leans much more: it's parallel to the V's left stroke, the same thickness and the same height, with a constant gap. Both files use `currentColor`.
+- `scripts/brand/generate-logo.py`: rebuilds the SVGs and `components/brand/vero-logo-geometry.ts`. Change `GAP` or `SLASH_W` there, never by hand.
+- `components/brand/vero-logo.tsx`: the animated logo (Motion).
+  - At the top of the page it shows `\Vero`. After scrolling down it shows `\V`.
+  - The letters "ero" slide under the V's right stroke. The backslash slides into the V's left stroke and pops back out.
+  - It honours "reduce motion".
+- `components/ui/navbar.tsx`: uses it. It collapses after 48 px of scroll and expands again within 12 px of the top.
+
+### Test checklist (browser, `cd marketing && npm run dev` → http://localhost:3001)
+- [ ] At the top, the navbar shows `\Vero`. Scroll down: it collapses to `\V` in about 0.75 s, and the nav links don't move.
+- [ ] Scroll back to the top: it expands again.
+- [ ] Scroll up and down quickly around the top: no flicker and no jumps.
+- [ ] macOS: turn on System Settings → Accessibility → Display → Reduce motion. It should switch without animating.
+- [ ] Mobile width: the logo fits beside Get Started and the menu button.

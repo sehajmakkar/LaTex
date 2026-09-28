@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useMotionValueEvent, useScroll } from "motion/react";
+import { VeroLogo } from "@/components/brand/vero-logo";
 import { appLinks } from "@/lib/site";
 
 const navLinks = [
@@ -13,15 +15,17 @@ const navLinks = [
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // "\Vero" at the top of the page, "\V" once scrolled. Two thresholds so it
+  // doesn't flicker when the page rests right at the edge.
+  const { scrollY } = useScroll();
+  const [atTop, setAtTop] = useState(true);
+  useMotionValueEvent(scrollY, "change", (y) => setAtTop((top) => (top ? y < 48 : y < 12)));
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 p-4">
       <nav className="max-w-5xl mx-auto flex items-center justify-between h-14 md:h-12 px-4 md:px-6 rounded-full bg-zinc-900/70 border border-zinc-800/50 backdrop-blur-md">
-        <Link
-          href="/"
-          className="font-display text-lg font-semibold text-zinc-100"
-        >
-          Vero
+        <Link href="/" aria-label="Vero home" className="flex items-center text-zinc-100">
+          <VeroLogo expanded={atTop} height={19} />
         </Link>
         <div className="flex items-center gap-2 md:gap-1">
           {/* Desktop nav links */}
