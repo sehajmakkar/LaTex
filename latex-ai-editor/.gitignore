@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Downloaded template sources (scripts/import-templates.ts)
 .template-cache/
+
+# launch video renders (large)
+brag-output/

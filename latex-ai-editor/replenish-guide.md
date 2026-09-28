@@ -1049,3 +1049,23 @@ Tests 139/139; ESLint 0 errors; a simulated production build without `GEMINI_API
 
 ### Your steps
 Nothing new. After pushing, check the Vercel build log for a "⚠ Production is missing optional environment variables" line and set whatever it lists.
+
+---
+
+## Fix: AI edits failing with "`find` text doesn't exist" (28 Sep 2026)
+
+### Why
+Found while making the launch video: "Tailor to a job" on Jake's resume came back with **no changes** (2 edits skipped), twice. Gemini sometimes writes `\resumeItem` inside its JSON answer with a single backslash, and JSON reads `\r` as a carriage return, so the text it wants to replace never matches your resume. Same for `\textbf` (tab) and `\frac`/`\emph` (form feed). The command bar and ⌘K were both exposed.
+
+### What changed
+- `src/services/ai/json-escapes.ts` (new): repairs those characters back into LaTeX macros before the edits are checked. It leaves real tabs alone in tab-indented documents.
+- `src/services/ai-service.ts`: runs it on command-bar `find`/`replace` and on ⌘K replacements.
+- `src/services/ai/command-prompt.ts`: one line asking the model to double backslashes.
+
+### What I already verified
+- `src/services/ai/json-escapes.test.ts`: 4 tests; all AI tests pass (45/45); typecheck clean.
+- The real request: **before**, 0 edits and 2 skipped on both tries. **After**, 4 valid edits on the first attempt, and the result compiles.
+
+### Test checklist (browser)
+- [ ] Open a Jake's resume, click **Tailor to a job**, paste a backend job post, and send. You should get a diff with several changes, not "no changes".
+- [ ] Select a `\resumeItem{...}` line, press ⌘K, and ask "make it more concise". The edit applies.

@@ -17,6 +17,7 @@ import {
   type CommandInput,
 } from "@/services/ai/command-prompt";
 import { resolveEdits, type ResolvedEdit } from "@/services/ai/command-edits";
+import { repairJsonEscapes } from "@/services/ai/json-escapes";
 
 /** Per Gemini call; with one retry the route stays under its 60 s limit. */
 const ATTEMPT_TIMEOUT_MS = 25_000;
@@ -102,7 +103,7 @@ class AIService {
         reason = 'The answer was not JSON with a "replacement" string.';
       } else {
         const check = validateInlineEdit({
-          output: parsed.data.replacement,
+          output: repairJsonEscapes(parsed.data.replacement, `${before}${input.selection}${after}`),
           selection: input.selection,
           instruction: input.instruction,
           context: `${before}\n${after}`,
@@ -174,7 +175,10 @@ class AIService {
         continue;
       }
 
-      const { accepted, rejected } = resolveEdits(input.document, parsed.edits.slice(0, 25), {
+      const proposed = parsed.edits
+        .slice(0, 25)
+        .map((e) => ({ find: repairJsonEscapes(e.find, input.document), replace: repairJsonEscapes(e.replace, input.document) }));
+      const { accepted, rejected } = resolveEdits(input.document, proposed, {
         scope: input.scope,
         instruction: input.instruction,
         compileFix: !!input.compileLog?.trim(),
