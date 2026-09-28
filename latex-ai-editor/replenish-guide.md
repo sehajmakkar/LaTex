@@ -933,3 +933,47 @@ Test cards depend on the **billing country** Dodo detects (India shows ₹ + GST
 - **Now:** the page starts from Dodo's `status` and confirms with Dodo through `GET /api/billing/checkout-status` (owner-only). States: *Payment didn't go through* (Try again), *Payment processing* (bank confirming; Pro turns on by itself), *Activating Pro* → *You're on Pro*, *Almost there* (slow webhook), *No payment found*. The API only overrides a "failed" URL when it confirms success. Decision rules: `src/lib/billing/checkout-outcome.ts` (7 tests).
 - **Also found:** your `seh…` account has **3 active test subscriptions** (25 Sep; 27 Sep 17:42 and 17:55 IST). The first purchase's webhook never arrived (endpoint/secret not set yet), so the account stayed Free and checkout allowed another. Checkout now **asks Dodo** for an active/on-hold Pro subscription first (by stored customer, or email + our user id) and refuses a duplicate. `processed_webhooks` now also records the account and subscription for tracing.
 - **You:** in Dodo test mode, cancel the two extra subscriptions and keep `sub_0NoWeL9rXBM1dPp0iP1K9` (the one on the account): `sub_0NoWbig99obwJlw75dYur` and `sub_0NoNzK0AKoztuXSZQmIBC`.
+
+---
+
+## Step: Point 3, deleting an account deletes everything (28 Sep 2026)
+
+### Why
+- Before: deleting a user (Clerk's account screen or dashboard) left **all our data**: DB rows, uploaded resumes and thumbnails in R2. There was no Clerk webhook and no "Delete account" in Vero.
+- A deleted account with an active subscription would **keep being charged**.
+- The Privacy policy (Phase 6) needs a real deletion path.
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Deletion service | Safe-to-retry order: **1.** cancel every live Dodo subscription (stops if that fails: never charge a deleted account) **2.** delete R2 files (ATS uploads by prefix + by record, project thumbnails) **3.** delete the user row (cascades to projects, usage, AI chats, versions, ATS reports) | `src/services/account-deletion-service.ts`, `src/lib/dodo.ts`, `src/services/storage/r2.ts` |
+| In-app | **Account** page (sidebar): profile, plan, "Manage sign-in and security", **Delete my account** (type DELETE) → our data, then the Clerk login → signed out to the marketing site | `src/app/(app)/account/page.tsx`, `POST /api/account/delete`, `AppShell.tsx` |
+| Clerk webhook | `user.deleted` from anywhere (Clerk account screen, dashboard) runs the same cleanup; failures → 500 so Clerk retries | `src/app/api/webhooks/clerk/route.ts`, `.env.example`, `env.ts` |
+| Billing guard | Duplicate check now also counts the archived Pro Plus product | `src/lib/dodo.ts` |
+| Cleanup | Removed the empty `api/webhooks/stripe` folder | |
+
+### What I already verified
+- **End-to-end 7/7** (dev server, real R2 + Clerk): setup with 2 resumes, a real thumbnail, an uploaded ATS file + report, usage, AI chat, version; without "DELETE" → 400; delete → 200; every DB row gone; both R2 files gone; Clerk login gone; the old session gets 401.
+- **Unit tests 3 new (137 total):** order is cancel → files → rows; a failed cancel deletes nothing; a failed file delete keeps the rows for a retry.
+- Clerk webhook wired (501 until its secret is set). ESLint 0 errors, `npm run build`.
+
+### Setup (you)
+1. **Clerk dashboard → Webhooks → Add endpoint:** `https://vero-dashboard.vercel.app/api/webhooks/clerk`, event **user.deleted**. Copy the **Signing secret**.
+2. Set `CLERK_WEBHOOK_SIGNING_SECRET` in Vercel (dashboard project) and in local `.env`; redeploy / restart `npm run dev`.
+3. (Optional) Clerk → User & authentication → allow users to delete their account from the profile screen. Both ways now clean up.
+
+### Test checklist
+| # | Check | Expected |
+|---|---|---|
+| 1 | Sidebar → **Account** | Name, email, plan; "Manage sign-in and security" opens Clerk's profile |
+| 2 | With a **test** account (not your main one): create a resume, compile, run an ATS check with an upload → Account → **Delete my account** → type DELETE | Signed out to the marketing site; signing in again starts a fresh, empty account |
+| 3 | Delete a test user from the **Clerk dashboard** | Clerk → Webhooks log shows 200; the user's resumes are gone from the DB (check in Neon) |
+| 4 | A Pro **test** account → delete it | Its subscription shows **cancelled** in Dodo (test mode) |
+
+### Results (fill in)
+| # | Result | Notes |
+|---|---|---|
+| 1 | | |
+| 2 | | |
+| 3 | | |
+| 4 | | |

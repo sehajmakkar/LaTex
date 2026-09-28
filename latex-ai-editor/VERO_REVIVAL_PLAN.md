@@ -646,7 +646,7 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 
 **Follow-ups:**
 - [ ] **(You)** `railway up` from `latex-service/` (see guide), then check the dashboard after a compile.
-- [ ] **(Medium, Phase 6)** Deleting a user (data deletion) must also delete their R2 thumbnails and ATS files, not just DB rows.
+- [x] **(Medium, Phase 6)** Deleting a user (data deletion) must also delete their R2 thumbnails and ATS files, not just DB rows. *Done 28 Sep: `deleteAccountData` (cancel subscription → R2 → DB), Account page "Delete account", Clerk `user.deleted` webhook.*
 - [ ] **(Low)** Existing resumes get a thumbnail on their next compile; no backfill job.
 
 ---
@@ -687,7 +687,7 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 - [ ] Vercel project `vero-app`, custom domain `app.<domain>`, env vars, `vercel.json` durations (AI command ~60 s).
 - [ ] Run `db:migrate` against prod (use migrations, not `push`).
 - [ ] Observability: Sentry (free tier) for app and service errors, Vercel Analytics (already present), uptime check on `/health` and `/api/health` (Better Stack / UptimeRobot free).
-- [ ] Legal pages: Terms, Privacy (states that resumes are sent to Google Gemini and stored in Neon/R2), Refunds. Also a data-deletion path: deleting the Clerk user cascades to the DB and removes R2 files.
+- [ ] Legal pages: Terms, Privacy (states that resumes are sent to Google Gemini and stored in Neon/R2), Refunds. Also a data-deletion path: deleting the Clerk user cascades to the DB and removes R2 files. *Data-deletion path: done (28 Sep, see replenish-guide "Point 3").*
 - [ ] Security pass: run `/security-review` on the branch, check the ownership checks on every `/api/*`, and add upload magic-byte checks.
 - [ ] Launch checklist: real payment with a live card (then refund it), sign-up from the landing page on a phone, and a compile when the service is cold.
 

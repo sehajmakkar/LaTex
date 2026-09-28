@@ -14,6 +14,7 @@ export const env = createEnv({
     GEMINI_MODEL_FAST: z.string().default("gemini-3.1-flash-lite"),
     OPENAI_API_KEY: z.string().optional(),
     CLERK_SECRET_KEY: z.string().optional(),
+    CLERK_WEBHOOK_SIGNING_SECRET: z.string().optional(),
     DODO_PAYMENTS_API_KEY: z.string().optional(),
     DODO_PAYMENTS_ENVIRONMENT: z
       .enum(["test_mode", "live_mode"])
@@ -43,6 +44,7 @@ export const env = createEnv({
     GEMINI_MODEL_FAST: process.env.GEMINI_MODEL_FAST,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
+    CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     DODO_PAYMENTS_API_KEY: process.env.DODO_PAYMENTS_API_KEY,
     DODO_PAYMENTS_ENVIRONMENT: process.env.DODO_PAYMENTS_ENVIRONMENT,

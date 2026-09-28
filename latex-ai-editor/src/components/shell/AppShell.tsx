@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut, UserButton, useAuth } from "@clerk/nextjs";
-import { ArrowUpRight, CreditCard, FileText, LayoutTemplate, LifeBuoy, Menu, ScanSearch, X } from "lucide-react";
+import { ArrowUpRight, CircleUser, CreditCard, FileText, LayoutTemplate, LifeBuoy, Menu, ScanSearch, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { VeroLogo } from "@/components/brand/VeroLogo";
@@ -31,6 +31,7 @@ function navItems(signedIn: boolean): NavItem[] {
       match: (p) => p.startsWith("/ats"),
     },
     { label: "Billing", href: "/billing", icon: CreditCard, match: (p) => p.startsWith("/billing") },
+    { label: "Account", href: "/account", icon: CircleUser, match: (p) => p.startsWith("/account") },
   ];
   return signedIn ? items : items.filter((i) => i.label === "Templates" || i.label === "ATS check");
 }
