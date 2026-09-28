@@ -12,3 +12,7 @@ CREATE TABLE IF NOT EXISTS processed_webhooks (
   outcome text NOT NULL,
   received_at timestamp NOT NULL DEFAULT now()
 );
+
+-- 28 Sep: trace which account and subscription each webhook touched.
+ALTER TABLE processed_webhooks ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE processed_webhooks ADD COLUMN IF NOT EXISTS subscription_id text;

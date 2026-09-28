@@ -896,17 +896,23 @@ Then restart `npm run dev`.
 3. Vercel env (Preview/Production): `DODO_PAYMENTS_API_KEY` (test key), `DODO_PAYMENTS_ENVIRONMENT=test_mode`, `DODO_PRODUCT_ID_PRO`, `DODO_PAYMENTS_WEBHOOK_KEY`, `NEXT_PUBLIC_APP_URL` (the deployed URL, for the return link). Redeploy.
 
 ### Test checklist (browser, test mode)
-Test cards: success `4242 4242 4242 4242`, exp `06/32`, CVC `123`. Renewal failure: `4000 0000 0000 0341`, exp `12/34`.
+Test cards depend on the **billing country** Dodo detects (India shows ₹ + GST and routes to the Indian processor):
+- **India:** success Visa `4576 2389 1277 1450` / Mastercard `5409 1626 6938 1034`, exp `06/32`, CVV `123`; decline `4706 1312 1121 2123`; UPI `success@upi` / `failure@upi`.
+- **Other countries:** success `4242 4242 4242 4242`, exp `06/32`, CVC `123`; renewal failure `4000 0000 0000 0341`, exp `12/34`.
+- Using the US card from India fails on Dodo's page with "Missing required param: connector_response_reference_id". That's the wrong test card, not an app bug.
 
 | # | Check | Expected |
 |---|---|---|
 | 1 | `/billing` on your `seh…` account | Free (the old subscription expired in April) |
-| 2 | **Upgrade to Pro** → pay with 4242… | Back on `/billing/success`: "You're on Pro" within seconds; sidebar shows Pro |
+| 2 | **Upgrade to Pro** → pay with the test card for your country (India: 4576 2389 1277 1450) | Back on `/billing/success`: "You're on Pro" within seconds; sidebar shows Pro |
 | 3 | `/billing` | "Renews on <date>" + **Manage subscription** |
 | 4 | Click **Upgrade** again (e.g. from the dashboard) | "You're already on Pro." (no second charge) |
 | 5 | **Manage subscription** → cancel in the Dodo portal → back to `/billing` | "Cancelled. You keep Pro until <date>; you won't be charged again." Still Pro |
 | 6 | Dodo dashboard → Webhooks → the endpoint's log | Every delivery 200; replaying one shows `"outcome":"duplicate"` |
-| 7 | (Optional) portal → change card to 4000…0341, then in Dodo test mode trigger a renewal | "Your last payment didn't go through…" + **Update payment method**; Pro for 3 more days |
+| 8 | Pay with the **decline** card (India `4706 1312 1121 2123`) | Back on our site: "Payment didn't go through… nothing was charged" with **Try again**, no spinner |
+| 9 | While Pro, start another checkout (e.g. `/billing` in a second tab from before) | "You already have an active Pro subscription…" (checked with Dodo, even if a webhook is late) |
+| 10 | Open `/billing/success` by hand | "No payment found" after a few seconds, not a spinner |
+| 7 | (Optional, non-India) portal → change card to 4000…0341, then in Dodo test mode trigger a renewal | "Your last payment didn't go through…" + **Update payment method**; Pro for 3 more days |
 
 ### Results (fill in)
 | # | Result | Notes |
@@ -918,3 +924,12 @@ Test cards: success `4242 4242 4242 4242`, exp `06/32`, CVC `123`. Renewal failu
 | 5 | | |
 | 6 | | |
 | 7 | | |
+| 8 | | |
+| 9 | | |
+| 10 | | |
+
+### Fix, 28 Sep: after a failed payment the page kept spinning
+- **Cause:** `/billing/success` assumed every return from Dodo was a success ("Payment received", then "Almost there"). Dodo sends `?status=succeeded|failed|processing&subscription_id=…`, which we ignored. In test mode a declined card also stays `pending/processing` in Dodo's API.
+- **Now:** the page starts from Dodo's `status` and confirms with Dodo through `GET /api/billing/checkout-status` (owner-only). States: *Payment didn't go through* (Try again), *Payment processing* (bank confirming; Pro turns on by itself), *Activating Pro* → *You're on Pro*, *Almost there* (slow webhook), *No payment found*. The API only overrides a "failed" URL when it confirms success. Decision rules: `src/lib/billing/checkout-outcome.ts` (7 tests).
+- **Also found:** your `seh…` account has **3 active test subscriptions** (25 Sep; 27 Sep 17:42 and 17:55 IST). The first purchase's webhook never arrived (endpoint/secret not set yet), so the account stayed Free and checkout allowed another. Checkout now **asks Dodo** for an active/on-hold Pro subscription first (by stored customer, or email + our user id) and refuses a duplicate. `processed_webhooks` now also records the account and subscription for tracing.
+- **You:** in Dodo test mode, cancel the two extra subscriptions and keep `sub_0NoWeL9rXBM1dPp0iP1K9` (the one on the account): `sub_0NoWbig99obwJlw75dYur` and `sub_0NoNzK0AKoztuXSZQmIBC`.

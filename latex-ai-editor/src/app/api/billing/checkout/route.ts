@@ -3,7 +3,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { userService } from "@/services/user-service";
 import { userRepository } from "@/repositories/user-repository";
-import { dodoClient, proProductId } from "@/lib/dodo";
+import { dodoClient, findLiveDodoSubscription, proProductId } from "@/lib/dodo";
 import { billingState } from "@/lib/billing/entitlements";
 import { allowRequest } from "@/lib/rate-limit";
 import { env } from "@/lib/env";
@@ -44,6 +44,21 @@ export async function POST(req: NextRequest) {
       );
     }
     if (!email && !user?.dodoCustomerId) return error("NO_EMAIL", "Your account has no email address for the receipt.", 400);
+
+    // Our copy can lag (a webhook still on its way, or one that never arrived): ask Dodo too.
+    // If this check itself fails, checkout goes ahead rather than blocking a payment.
+    const live = await findLiveDodoSubscription({ clerkUserId: userId, dodoCustomerId: user?.dodoCustomerId ?? null, email }).catch((e) => {
+      console.error("Live subscription check failed:", e);
+      return null;
+    });
+    if (live) {
+      console.warn(JSON.stringify({ event: "billing_checkout_blocked_existing", userId, subscriptionId: live.subscriptionId, status: live.status }));
+      return error(
+        "ALREADY_SUBSCRIBED",
+        "You already have an active Pro subscription. It can take a minute to show on your account; refresh shortly.",
+        409
+      );
+    }
 
     const baseUrl = env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
     const session = await dodoClient.checkoutSessions.create({

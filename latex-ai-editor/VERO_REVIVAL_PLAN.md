@@ -360,6 +360,12 @@ Found in the audit: the webhook granted Pro for **any** product; never saved the
 
 
 
+**Follow-ups found while testing billing (28 Sep):**
+- [x] **(High)** After a declined payment the success page spun forever ("Payment received" → "Almost there"). *Fixed: uses Dodo's return status + an owner-only status check; failed/processing/no-payment states.*
+- [x] **(High)** A missed webhook let the same account open **duplicate subscriptions** (3 active in test mode). *Fixed: checkout asks Dodo for a live subscription first; webhook log records account + subscription.*
+- [ ] **(You)** Cancel the two duplicate test subscriptions in Dodo (see guide).
+- [ ] **(Medium, Phase 6)** A daily reconciliation job (Dodo subscriptions vs our users) to catch any webhook that never arrives in production.
+
 ### Phase 3: Rebrand to Vero, unified app shell, landing → app flow ✅ *Implemented 26 Sep 2026. Steps are in `replenish-guide.md`.*
 
 **Design research:** Awwwards, via `awwwards-mcp` (audited, then run in an isolated Docker container). The most relevant references were **Level2** (fintech dashboard: one accent on quiet dark surfaces, hairline-bordered cards, small labels over big numbers, pill badges, slim left rail) and **invoko** (AI app: whitespace, one deep accent, pill CTAs, a 3-link nav). Their layout ideas were adopted; your existing monochrome palette was kept.

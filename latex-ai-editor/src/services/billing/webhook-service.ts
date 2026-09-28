@@ -41,8 +41,11 @@ export async function handleDodoWebhook(webhookId: string, envelope: DodoEnvelop
   const data = envelope.data;
 
   return db.transaction(async (tx) => {
-    const record = async (outcome: string) => {
-      await tx.insert(processedWebhooks).values({ webhookId, eventType: type, outcome }).onConflictDoNothing();
+    const record = async (outcome: string, userId?: string) => {
+      await tx
+        .insert(processedWebhooks)
+        .values({ webhookId, eventType: type, outcome, userId: userId ?? null, subscriptionId: data?.subscription_id ?? null })
+        .onConflictDoNothing();
       return outcome;
     };
 
@@ -84,7 +87,7 @@ export async function handleDodoWebhook(webhookId: string, envelope: DodoEnvelop
     const decision = decideSubscriptionUpdate(user, event, (productId) => !!productId && planFromProductId(productId) !== null);
     if (!decision.apply) {
       console.warn(JSON.stringify({ event: "billing_webhook_ignored", webhookId, type, userId: user.id, reason: decision.reason }));
-      return { outcome: await record(`ignored:${decision.reason}`), userId: user.id };
+      return { outcome: await record(`ignored:${decision.reason}`, user.id), userId: user.id };
     }
 
     const u = decision.update;
@@ -105,6 +108,6 @@ export async function handleDodoWebhook(webhookId: string, envelope: DodoEnvelop
     console.log(
       JSON.stringify({ event: "billing_webhook_applied", webhookId, type, userId: user.id, status: u.subscriptionStatus, plan: u.plan, periodEnd: u.currentPeriodEnd })
     );
-    return { outcome: await record("applied"), userId: user.id };
+    return { outcome: await record("applied", user.id), userId: user.id };
   });
 }

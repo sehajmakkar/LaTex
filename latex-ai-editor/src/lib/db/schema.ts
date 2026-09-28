@@ -29,6 +29,10 @@ export const processedWebhooks = pgTable("processed_webhooks", {
   eventType: text("event_type").notNull(),
   /** What we did with it: applied | ignored:<reason>. */
   outcome: text("outcome").notNull(),
+  /** The account it was matched to (null if none). */
+  userId: text("user_id"),
+  /** Dodo's subscription id, for tracing. */
+  subscriptionId: text("subscription_id"),
   receivedAt: timestamp("received_at").notNull().defaultNow(),
 });
 
