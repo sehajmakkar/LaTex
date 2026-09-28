@@ -9,6 +9,9 @@ const isPublicRoute = createRouteMatcher([
   "/templates(.*)",
   "/api/templates(.*)",
   "/ats/free(.*)",
+  // Generated icon and share image: fetched by browsers, iOS and link previewers without a session.
+  "/apple-icon(.*)",
+  "/opengraph-image(.*)",
 ]);
 
 const isApiRoute = createRouteMatcher(["/api(.*)", "/trpc(.*)"]);

@@ -91,3 +91,16 @@ export function VeroLogo({ expanded, height = 18, className }: VeroLogoProps) {
     </motion.span>
   );
 }
+
+/** Static "\Vero" wordmark in currentColor (footer and other places that don't animate). */
+export function VeroWordmark({ height = 20, className }: { height?: number; className?: string }) {
+  return (
+    <svg viewBox={`0 0 ${G.wordW} ${G.viewH}`} height={height} width={(G.wordW * height) / G.viewH} fill="currentColor" role="img" aria-label="Vero" className={className}>
+      <path d={G.slash} />
+      <path d={G.V} />
+      <path d={G.e} />
+      <path d={G.r} />
+      <path d={G.o} />
+    </svg>
+  );
+}

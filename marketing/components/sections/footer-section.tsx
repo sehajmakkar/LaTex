@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Github, Twitter, Linkedin } from "lucide-react";
+import { VeroWordmark } from "@/components/brand/vero-logo";
 import { CONTACT_EMAIL, appLinks } from "@/lib/site";
 
 const footerLinks = {
@@ -31,11 +32,8 @@ export function FooterSection() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link
-              href="/"
-              className="font-display text-xl font-semibold text-zinc-100"
-            >
-              Vero
+            <Link href="/" aria-label="Vero home" className="inline-flex text-zinc-100">
+              <VeroWordmark height={22} />
             </Link>
             <p className="mt-4 text-sm text-zinc-500 max-w-xs">
               The AI-native writing workspace for LaTeX, resumes, and technical

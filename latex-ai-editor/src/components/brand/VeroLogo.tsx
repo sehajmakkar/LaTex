@@ -1,30 +1,36 @@
 import { cn } from "@/lib/utils";
+import { VERO_LOGO as G } from "@/components/brand/vero-logo-geometry";
 
 /**
- * Vero mark: a check-shaped "V" (vero = "true") in a rounded square. Uses
- * currentColor for the tile, so it follows the monochrome theme.
+ * Vero mark: "\V" in Cal Sans, the backslash drawn parallel to the V's left
+ * stroke. Drawn in currentColor, so it follows the theme (ink on light, paper
+ * on dark). Size it by height; the width follows.
  */
 export function VeroMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden className={cn("h-7 w-7 shrink-0", className)}>
-      <rect width="32" height="32" rx="8" fill="currentColor" />
-      <path
-        d="M9 10.5 L15 22 L23.5 8.5"
-        fill="none"
-        stroke="var(--background)"
-        strokeWidth="3.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg viewBox={`0 0 ${G.markW} ${G.capH}`} fill="currentColor" aria-hidden className={cn("h-5 w-auto shrink-0", className)}>
+      <path d={G.slash} />
+      <path d={G.V} />
     </svg>
   );
 }
 
+/** "\Vero" wordmark, or the mark alone with `showWordmark={false}`. */
 export function VeroLogo({ className, showWordmark = true }: { className?: string; showWordmark?: boolean }) {
+  if (!showWordmark) return <VeroMark className={cn("text-foreground", className)} />;
   return (
-    <span className={cn("inline-flex items-center gap-2 text-foreground", className)}>
-      <VeroMark />
-      {showWordmark && <span className="font-display text-lg font-semibold leading-none tracking-tight">Vero</span>}
-    </span>
+    <svg
+      viewBox={`0 0 ${G.wordW} ${G.viewH}`}
+      fill="currentColor"
+      role="img"
+      aria-label="Vero"
+      className={cn("h-5 w-auto shrink-0 text-foreground", className)}
+    >
+      <path d={G.slash} />
+      <path d={G.V} />
+      <path d={G.e} />
+      <path d={G.r} />
+      <path d={G.o} />
+    </svg>
   );
 }

@@ -1089,3 +1089,59 @@ Found while making the launch video: "Tailor to a job" on Jake's resume came bac
 - [ ] Scroll up and down quickly around the top: no flicker and no jumps.
 - [ ] macOS: turn on System Settings → Accessibility → Display → Reduce motion. It should switch without animating.
 - [ ] Mobile width: the logo fits beside Get Started and the menu button.
+
+---
+
+## Step: New logo everywhere, and the withvero.app domains (28 Sep 2026)
+
+### What changed
+**Logo (both projects).** `marketing/scripts/brand/generate-logo.py` is the single source. It writes:
+- the geometry for the React components;
+- `public/brand/vero-{mark,wordmark}.svg`, drawn in `currentColor` so they follow the theme;
+- `-black`/`-white` SVG variants;
+- `icon.svg`, the favicon: a black mark that turns white in dark-mode browsers.
+
+| Where | Now |
+|---|---|
+| Dashboard sidebar, mobile bar, sign-in/up, error, 404 | `\Vero` wordmark (`VeroLogo`), ink in light theme, paper in dark |
+| Editor header | `\V` mark (`VeroMark`) |
+| Marketing navbar / footer | animated `\Vero` ↔ `\V` / static wordmark |
+| Favicon, both sites | `icon.svg` (theme-aware) + `favicon.ico` fallback (paper mark on an ink tile, 16/32/48) |
+| iPhone home screen, both | `apple-icon` (180 px, ink tile) |
+| Share previews | marketing: wordmark + "Cursor for LaTeX" in Cal Sans, big `\V` watermark; dashboard (new): centred wordmark + tagline |
+| Upload-ready PNGs | `public/brand/vero-icon-512.png` (tile), `vero-mark-{black,white}.png`, `vero-wordmark-{black,white}.png` |
+
+Other changes:
+- The dashboard middleware now lets `/apple-icon` and `/opengraph-image` through without sign-in. Link previewers and iOS have no session, so before this they got the sign-in page.
+- Cal Sans is committed to `assets/fonts/` (OFL licence alongside) for the share images.
+
+**Domains.** The code defaults are now `https://www.withvero.app` (marketing) and `https://dashboard.withvero.app` (dashboard). The dashboard also sets `metadataBase` from `NEXT_PUBLIC_APP_URL`.
+
+### What I already verified
+Both projects typecheck, and the dashboard's 143 tests pass. From the dev servers:
+- **Dashboard logo:** the sign-in page and templates sidebar were checked in light and dark themes.
+- **Marketing:** the footer, and that the page head has `favicon.ico`, `icon.svg`, the Apple icon and the share image.
+- **Image routes:** all four return PNGs.
+
+### Your steps
+1. **Vercel env vars, then redeploy both.** `NEXT_PUBLIC_*` values are fixed at build time.
+   - **Dashboard project:** `NEXT_PUBLIC_APP_URL=https://dashboard.withvero.app`, `NEXT_PUBLIC_MARKETING_URL=https://www.withvero.app`
+   - **Marketing project:** `NEXT_PUBLIC_APP_URL=https://dashboard.withvero.app`, `NEXT_PUBLIC_SITE_URL=https://www.withvero.app`
+2. **Vercel domains.** In the marketing project, make `withvero.app` (no www) redirect to `www.withvero.app`. Optionally redirect the old `*.vercel.app` domains to the new ones.
+3. **Clerk.**
+   - Rename the application from "LaTex" to **Vero**. The sign-in card currently says "Sign in to LaTex".
+   - Upload `public/brand/vero-icon-512.png` as the logo.
+   - Add `https://dashboard.withvero.app` to the allowed origins and redirect URLs.
+   - Point the webhook at `https://dashboard.withvero.app/api/webhooks/clerk`. If the signing secret changes, update `CLERK_WEBHOOK_SIGNING_SECRET`.
+   - When you move to a Clerk production instance, it needs its own DNS records on withvero.app, and Google sign-in needs your own Google OAuth credentials.
+4. **Dodo.**
+   - Point the webhook at `https://dashboard.withvero.app/api/webhooks/dodo`. If the secret changes, update it in Vercel.
+   - Set the business name and logo (`vero-icon-512.png`).
+   - The checkout return URL comes from `NEXT_PUBLIC_APP_URL`, so step 1 covers it.
+
+### Test checklist
+- [ ] Browser tab icon: black `\V` in a light-mode browser, white in dark mode (both sites).
+- [ ] Paste `https://www.withvero.app` and `https://dashboard.withvero.app/sign-in` into https://www.opengraph.xyz. Both show the new images.
+- [ ] Dashboard: toggle the theme. The sidebar wordmark flips between ink and paper.
+- [ ] Marketing "Get Started" goes to `dashboard.withvero.app/sign-up`, and "Back to Vero site" on sign-in goes to `www.withvero.app`.
+- [ ] Sign up, pay (test mode) and delete an account on the new domain. This proves the Clerk and Dodo webhooks reach it.

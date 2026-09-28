@@ -19,6 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for the share image; NEXT_PUBLIC_APP_URL is the dashboard's own URL.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://dashboard.withvero.app"),
   title: { default: site.name, template: `%s · ${site.name}` },
   description: site.description,
   applicationName: site.name,
