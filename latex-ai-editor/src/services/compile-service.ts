@@ -64,7 +64,13 @@ export async function compileLatex(
 ): Promise<CompileResult> {
   const engine = requestedEngine ?? detectEngine(content);
   const serviceBase = env.LATEX_SERVICE_URL?.replace(/\/$/, "");
-  return serviceBase ? compileRemote(serviceBase, content, engine, options) : compileLocal(content, engine);
+  if (serviceBase) return compileRemote(serviceBase, content, engine, options);
+  // The local fallback runs TeX in the app process without the service's sandbox
+  // (it could read the app's secrets): development only.
+  if (process.env.NODE_ENV === "production") {
+    return { ok: false, code: "COMPILE_SERVICE_ERROR", message: "The compiler isn't configured.", status: 503 };
+  }
+  return compileLocal(content, engine);
 }
 
 /** Longest a single compile may run (the service is told the same, so it stops too). */

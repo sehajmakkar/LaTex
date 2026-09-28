@@ -683,12 +683,12 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 ### Phase 6: Production launch (≈3–4 days)
 
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).
-- [ ] Make required env vars actually required in `env.ts` for production (e.g. `DATABASE_URL`, `CLERK_SECRET_KEY`, `GEMINI_API_KEY`), so a bad deploy fails at build time rather than at runtime.
+- [x] Make required env vars actually required in `env.ts` for production (e.g. `DATABASE_URL`, `CLERK_SECRET_KEY`, `GEMINI_API_KEY`), so a bad deploy fails at build time rather than at runtime. *Done 28 Sep in `next.config.ts`: core vars fail a production build, feature vars warn (promote at launch).*
 - [ ] Vercel project `vero-app`, custom domain `app.<domain>`, env vars, `vercel.json` durations (AI command ~60 s).
 - [ ] Run `db:migrate` against prod (use migrations, not `push`). *Ready 28 Sep: a fresh database is built by `npm run db:migrate` alone (baseline + follow-ups, tested on Postgres 17). See replenish-guide "Point 4".*
 - [ ] Observability: Sentry (free tier) for app and service errors, Vercel Analytics (already present), uptime check on `/health` and `/api/health` (Better Stack / UptimeRobot free).
 - [ ] Legal pages: Terms, Privacy (states that resumes are sent to Google Gemini and stored in Neon/R2), Refunds. Also a data-deletion path: deleting the Clerk user cascades to the DB and removes R2 files. *Data-deletion path: done (28 Sep, see replenish-guide "Point 3").*
-- [ ] Security pass: run `/security-review` on the branch, check the ownership checks on every `/api/*`, and add upload magic-byte checks.
+- [x] Security pass: run `/security-review` on the branch, check the ownership checks on every `/api/*`, and add upload magic-byte checks. *Done 28 Sep: whole-app review, no vulnerability at confidence ≥8; 3 defence-in-depth fixes; see replenish-guide "Point 5".*
 - [ ] Launch checklist: real payment with a live card (then refund it), sign-up from the landing page on a phone, and a compile when the service is cold.
 
 **Done when:** a stranger can go landing → sign up → build a resume → pay → download, on the production domain.

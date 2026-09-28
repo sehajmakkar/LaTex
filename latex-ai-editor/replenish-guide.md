@@ -1021,3 +1021,31 @@ Test cards depend on the **billing country** Dodo detects (India shows ₹ + GST
 |---|---|---|
 | 1 | `npm run db:migrate` after the deploy | |
 | 2 | Dashboard, resume, billing still work | |
+
+---
+
+## Step: Point 5, security review (28 Sep 2026)
+
+### What was reviewed
+The whole app, not a diff (everything was committed): middleware, **every API route**, both webhooks, uploads/imports, billing, account deletion, sign-in redirects, and the compile service on Railway. Method: one pass to find candidates with exploit paths, then each candidate checked for false positives; only confidence ≥ 8 counts.
+
+### Result: no vulnerabilities at confidence ≥ 8
+Checked and sound: every route taking an id checks ownership (projects, versions, AI messages, ATS reports + files, thumbnails, duplicate, checkout status); both webhooks verify signatures before reading the body; users can't change billing fields; checkout metadata is set server-side; the zip import never touches disk; the compile service checks its secret in constant time and sandboxes every job (own user, no shell escape, TeX file limits, env allow-list, no writable temp dirs).
+
+### Candidates below the threshold, and what I did
+| # | Candidate | Verdict | Action |
+|---|---|---|---|
+| 1 | Biber (bibliographies) might fetch URLs or read files, bypassing TeX's limits (conf. 5) | **Refuted by test** in the real container: remote/absolute resources never start biber (no request reached my listener); `../../../etc/passwd` → biber uses TeX's file finder, which enforces the sandbox ("Cannot find") | None needed |
+| 2 | Uploaded resume served with the uploader's own Content-Type (self-XSS only; owner-only) | Not exploitable across users | **Fixed:** type chosen from what we detected (PDF/DOCX/TXT), `nosniff`, non-PDF downloads |
+| 3 | Local TeX fallback (no sandbox) would run if the compile service URL were missing | Not reachable on Vercel today | **Fixed:** refused in production |
+| 4 | `/\t/evil.com` could slip through the sign-in redirect check (Clerk likely blocks it anyway) | Low | **Fixed:** control characters/backslashes rejected + same-origin check; 2 tests |
+| 5 | Billing webhook trusts `metadata.clerk_user_id` | Needs a victim's secret user id **and** the attacker paying; only gives the victim Pro | None |
+
+### Also done (rest of Point 5)
+- **Production env check** (`next.config.ts`): on Vercel production, a missing **core** variable (database, Clerk keys, Gemini, compile service URL/secret) **fails the build** with the list; missing **feature** variables (Dodo, R2, Clerk webhook, app URL) print a warning. At launch, promote them to core.
+
+### Verified
+Tests 139/139; ESLint 0 errors; a simulated production build without `GEMINI_API_KEY` fails with a clear message; with the full `.env` it builds.
+
+### Your steps
+Nothing new. After pushing, check the Vercel build log for a "⚠ Production is missing optional environment variables" line and set whatever it lists.

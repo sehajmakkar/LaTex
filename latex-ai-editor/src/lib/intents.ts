@@ -31,7 +31,17 @@ export function postAuthPath(intent: Intent | null): string {
 
 /** Accepts only same-site relative paths (Clerk's redirect_url), never "//host". */
 export function safeRelativePath(raw: string | null | undefined): string | null {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
+  if (!raw || !raw.startsWith("/")) return null;
+  // Browsers drop tabs/newlines and treat "\\" like "/", so "/\t/evil.com" or "/\\evil.com" become "//evil.com".
+  if (/[\u0000-\u001f\u007f\\]/.test(raw)) return null;
+  if (raw.startsWith("//")) return null;
+  // Belt and braces: it must resolve to the same origin.
+  try {
+    const base = "https://same.origin.invalid";
+    if (new URL(raw, base).origin !== base) return null;
+  } catch {
+    return null;
+  }
   return raw;
 }
 

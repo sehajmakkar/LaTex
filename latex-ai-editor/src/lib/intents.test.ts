@@ -32,3 +32,17 @@ describe("post-auth redirects", () => {
     expect(resolvePostAuth({ redirectUrl: "//evil.com" }, origins)).toBe("/dashboard");
   });
 });
+
+describe("safeRelativePath (open-redirect guard)", () => {
+  it("keeps normal same-site paths", async () => {
+    const { safeRelativePath } = await import("./intents");
+    expect(safeRelativePath("/dashboard?intent=ats")).toBe("/dashboard?intent=ats");
+    expect(safeRelativePath("/project/abc#x")).toBe("/project/abc#x");
+  });
+  it("rejects anything a browser could turn into another origin", async () => {
+    const { safeRelativePath } = await import("./intents");
+    for (const bad of ["//evil.com", "/\\evil.com", "/\t/evil.com", "/\n/evil.com", "/%09/evil.com".replace("%09", "\t"), "https://evil.com", "evil.com", "", null]) {
+      expect(safeRelativePath(bad as string | null)).toBeNull();
+    }
+  });
+});

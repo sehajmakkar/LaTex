@@ -36,17 +36,26 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const contentType =
-      row.resumeFileMimeType ||
-      (object.ContentType as string | undefined) ||
-      "application/octet-stream";
+    // The type comes from what we detected at upload (source + magic bytes), never from
+    // the browser-supplied type, so an upload can't be served as HTML on our origin.
+    const SAFE_TYPES: Record<string, string> = {
+      upload_pdf: "application/pdf",
+      editor: "application/pdf",
+      upload_docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      upload_txt: "text/plain; charset=utf-8",
+    };
+    const contentType = SAFE_TYPES[row.source] ?? "application/octet-stream";
     const fileName = row.resumeFileName || "resume";
+    // Only PDFs display inline (the report's preview); everything else downloads.
+    const disposition = contentType === "application/pdf" ? "inline" : "attachment";
 
     return new NextResponse(body.transformToWebStream(), {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
+        "Content-Disposition": `${disposition}; filename="${encodeURIComponent(fileName)}"`,
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {
