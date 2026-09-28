@@ -12,6 +12,7 @@ import { PLANS } from "@/lib/plans";
 import { openBillingPortal, startProCheckout } from "@/lib/client/actions";
 import { useUsage } from "@/hooks/use-usage";
 import { cn } from "@/lib/utils";
+import { site } from "@/lib/site";
 
 const PRO_PRICE = "$5.99";
 
@@ -184,10 +185,22 @@ export default function BillingPage() {
               )}
             </div>
           ) : (
-            <Button className="mt-6" onClick={upgrade} disabled={checkingOut}>
-              {checkingOut && <Loader2 className="h-4 w-4 animate-spin" />}
-              Upgrade to Pro
-            </Button>
+            <div className="mt-6">
+              <Button onClick={upgrade} disabled={checkingOut}>
+                {checkingOut && <Loader2 className="h-4 w-4 animate-spin" />}
+                Upgrade to Pro
+              </Button>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Renews monthly. Cancel anytime; full refund of your first payment within 7 days.{" "}
+                <a href={`${site.marketingUrl}${site.legal.refunds}`} className="underline underline-offset-2 hover:text-foreground">
+                  Refund Policy
+                </a>{" "}
+                ·{" "}
+                <a href={`${site.marketingUrl}${site.legal.terms}`} className="underline underline-offset-2 hover:text-foreground">
+                  Terms
+                </a>
+              </p>
+            </div>
           )}
         </div>
       </div>

@@ -698,6 +698,12 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 
 
 
+**Legal follow-ups (from the 29 Sep legal pages)**, by priority:
+- [ ] **(High)** Confirm the Gemini API key is on a paid (billing-enabled) project. The Privacy Policy states it; on the free tier, Google may use prompts for training.
+- [ ] **(Medium)** Minors: the Terms allow 13+, with a guardian's permission under 18. India's DPDP Act expects *verifiable* parental consent. Add at least a sign-up checkbox ("I'm 18+, or my parent/guardian agrees") and get a lawyer's view before scaling.
+- [ ] **(Medium)** Have a lawyer review Terms/Privacy/Refunds (drafts match the product; they aren't legal advice).
+- [ ] **(Low)** The Terms promise 14 days' email notice before a price change, and email notice of significant changes: keep a way to email all users (Clerk export or an email service).
+
 ### Phase 7: Features to compete (post-launch, pick by priority)
 
 Based on Overleaf, Rezi, Teal, Jobscan, Enhancv, FlowCV, and Kickresume:

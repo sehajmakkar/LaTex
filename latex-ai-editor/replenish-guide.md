@@ -1145,3 +1145,46 @@ Both projects typecheck, and the dashboard's 143 tests pass. From the dev server
 - [ ] Dashboard: toggle the theme. The sidebar wordmark flips between ink and paper.
 - [ ] Marketing "Get Started" goes to `dashboard.withvero.app/sign-up`, and "Back to Vero site" on sign-in goes to `www.withvero.app`.
 - [ ] Sign up, pay (test mode) and delete an account on the new domain. This proves the Clerk and Dodo webhooks reach it.
+
+---
+
+## Step: Terms, Privacy and Refund pages (29 Sep 2026)
+
+### Why
+Dodo Payments (merchant of record) reviews these pages during verification. Before this step, the footer's Privacy, Terms and Security links went to `#`.
+
+### What changed
+- **Marketing site:** `/terms`, `/privacy` and `/refunds` (`marketing/app/{terms,privacy,refunds}/page.tsx`) share a layout in `components/legal/legal-page.tsx`.
+  - The operator name, email, X handle, refund window and effective date all live in one place: `legal` and `CONTACT_EMAIL` in `marketing/lib/site.ts`.
+- **Content is built from what the code actually does:**
+  - the services involved: Clerk, Neon, Cloudflare R2, Gemini, Railway, Vercel and Dodo;
+  - what's stored, and that account deletion wipes it;
+  - imported files aren't kept, and the compile sandbox is cleared after each job;
+  - the analytics set no cookies;
+  - billing follows the real rules: cancel anytime, Pro until the period ends, and a short grace period after a failed renewal payment.
+- **Your decisions:**
+  - operator: Sehaj Preet, an individual in India, with disputes going to the courts of India;
+  - contact: sehajmakkar007@gmail.com or @sehajmakkarr on X;
+  - refunds: a 7-day refund on the first Pro payment only, renewals aren't refunded, and erroneous charges are always refunded;
+  - age: 13+, and under-18s need a parent's or guardian's permission. Paid plans must be bought by an adult.
+- **Links:**
+  - The footer links to all three pages, plus Security (`/privacy#security`).
+  - I removed the dead About/Blog/Careers links and the GitHub icon, and set up the X and LinkedIn icons.
+  - The navbar and footer anchors now use `/#…`, so they work from the new pages.
+  - The pricing section has a line about refunds.
+  - The sitemap lists the new pages.
+- **Dashboard:**
+  - "By continuing, you agree to…" appears under sign-in and sign-up.
+  - A refund and terms note sits under **Upgrade to Pro**.
+
+### Check before relying on it
+- [ ] **Legal name:** `legal.operator` ("Sehaj Preet") must match the name on your Dodo KYC and bank account. Edit it in `marketing/lib/site.ts` if not.
+- [ ] **Gemini billing:** the Privacy Policy says we use Google's *paid* Gemini API. This is only true if billing is enabled on the project that owns `GEMINI_API_KEY`. On the free tier, Google may use prompts to improve its products. Check in Google AI Studio → API keys → the key's project shows "Paid" / billing linked.
+- [ ] **Refund process:** when you refund a first payment, refund it in the Dodo dashboard **and** cancel the subscription immediately. The webhook then moves the account to Free.
+- [ ] **Not legal advice:** these are careful plain-language drafts that match the product. Have a lawyer review them before you scale, especially the under-18 section. India's DPDP Act expects *verifiable* parental consent for minors, and Vero currently relies on users' own statement.
+
+### Test checklist
+- [ ] `https://www.withvero.app/terms`, `/privacy` and `/refunds` load, and each links to the other two.
+- [ ] Footer: every link goes somewhere real. Contact opens an email to your address, and X and LinkedIn open your profiles.
+- [ ] From `/terms`, clicking **Pricing** in the navbar goes to the pricing section on the home page.
+- [ ] Dashboard sign-up shows the Terms/Privacy line, and Billing shows the refund note under Upgrade.

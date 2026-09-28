@@ -45,6 +45,17 @@ export function AuthLayout({ children, heading }: { children: React.ReactNode; h
         <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-16">
           <h1 className="sr-only">{heading}</h1>
           {children}
+          <p className="max-w-sm text-center text-xs text-muted-foreground">
+            By continuing, you agree to Vero&apos;s{" "}
+            <a href={`${site.marketingUrl}${site.legal.terms}`} className="underline underline-offset-2 hover:text-foreground">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href={`${site.marketingUrl}${site.legal.privacy}`} className="underline underline-offset-2 hover:text-foreground">
+              Privacy Policy
+            </a>
+            .
+          </p>
         </div>
       </main>
     </div>

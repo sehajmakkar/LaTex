@@ -9,8 +9,20 @@ export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://dashboard.wi
 /** This site's public URL, used for canonical links, sitemap and share images. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.withvero.app").replace(/\/$/, "")
 
-/** Optional contact address (footer "Contact" link). */
-export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || ""
+/** Contact address for support, privacy and refund requests (footer "Contact" link and legal pages). */
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "sehajmakkar007@gmail.com"
+
+/** Who operates Vero, for the Terms, Privacy Policy and Refund Policy. */
+export const legal = {
+  /** Must match the name on your ID/bank account (it's the party customers contract with). */
+  operator: "Sehaj Preet",
+  location: "India",
+  /** Date the current versions of the legal pages took effect. Update it whenever they change. */
+  effectiveDate: "29 September 2026",
+  x: { handle: "@sehajmakkarr", url: "https://x.com/sehajmakkarr" },
+  linkedin: "https://www.linkedin.com/in/sehajmakkar/",
+  refundWindowDays: 7,
+}
 
 export const site = {
   name: "Vero",

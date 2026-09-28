@@ -1,27 +1,26 @@
 import Link from "next/link";
-import { Github, Twitter, Linkedin } from "lucide-react";
+import { Twitter, Linkedin } from "lucide-react";
 import { VeroWordmark } from "@/components/brand/vero-logo";
-import { CONTACT_EMAIL, appLinks } from "@/lib/site";
+import { CONTACT_EMAIL, appLinks, legal } from "@/lib/site";
 
 const footerLinks = {
   product: [
-    { label: "Features", href: "#features" },
+    { label: "Features", href: "/#features" },
     { label: "Templates", href: appLinks.templates },
     { label: "Free ATS check", href: appLinks.ats },
-    { label: "Pricing", href: "#pricing" },
-    { label: "FAQ", href: "#faq" },
+    { label: "Pricing", href: "/#pricing" },
+    { label: "FAQ", href: "/#faq" },
   ],
   company: [
-    { label: "About", href: "#" },
-    { label: "Blog", href: "#" },
     { label: "Log in", href: appLinks.signIn },
-    { label: "Contact", href: CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : "#" },
-    { label: "Careers", href: "#" },
+    { label: "Contact", href: `mailto:${CONTACT_EMAIL}` },
+    { label: "X (Twitter)", href: legal.x.url },
   ],
   legal: [
-    { label: "Privacy", href: "#" },
-    { label: "Terms", href: "#" },
-    { label: "Security", href: "#" },
+    { label: "Terms of Service", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Refund Policy", href: "/refunds" },
+    { label: "Security", href: "/privacy#security" },
   ],
 };
 
@@ -105,27 +104,24 @@ export function FooterSection() {
             © {new Date().getFullYear()} Vero. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <Link
-              href="#"
+            <a
+              href={legal.x.url}
+              target="_blank"
+              rel="noreferrer"
               className="text-zinc-500 hover:text-zinc-300 transition-colors"
-              aria-label="GitHub"
-            >
-              <Github className="w-5 h-5" />
-            </Link>
-            <Link
-              href="#"
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
-              aria-label="Twitter"
+              aria-label="Vero on X"
             >
               <Twitter className="w-5 h-5" />
-            </Link>
-            <Link
-              href="#"
+            </a>
+            <a
+              href={legal.linkedin}
+              target="_blank"
+              rel="noreferrer"
               className="text-zinc-500 hover:text-zinc-300 transition-colors"
               aria-label="LinkedIn"
             >
               <Linkedin className="w-5 h-5" />
-            </Link>
+            </a>
           </div>
         </div>
       </div>

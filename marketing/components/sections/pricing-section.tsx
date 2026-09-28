@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import Link from "next/link";
-import { appLinks, pricing } from "@/lib/site";
+import { appLinks, legal, pricing } from "@/lib/site";
 
 // Mirrors the dashboard's billing page (latex-ai-editor/src/app/(app)/billing).
 const plans = [
@@ -127,7 +127,11 @@ export function PricingSection() {
           ))}
         </div>
         <p className="mt-6 text-center text-sm text-zinc-600">
-          Prices in USD, tax included. Payments are handled securely by Dodo Payments.
+          Prices in USD, tax included. Payments are handled securely by Dodo Payments. Cancel anytime, and get a full refund of
+          your first Pro payment within {legal.refundWindowDays} days.{" "}
+          <Link href="/refunds" className="underline underline-offset-2 hover:text-zinc-400">
+            Refund Policy
+          </Link>
         </p>
       </div>
     </section>
