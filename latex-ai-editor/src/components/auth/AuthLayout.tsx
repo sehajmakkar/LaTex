@@ -3,10 +3,11 @@ import { ArrowUpRight, Check } from "lucide-react";
 import { VeroLogo } from "@/components/brand/VeroLogo";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { site } from "@/lib/site";
+import { ResumeFolder } from "@/components/auth/ResumeFolder";
 
 const POINTS = [
-  "Professional LaTeX resume templates, compiled to PDF in seconds",
-  "AI edits with ⌘K: select a line, say what to change",
+  "Ask for any change like in ChatGPT, and review it as a diff",
+  "Proven LaTeX templates, or import the resume you have",
   "Free ATS check to see how hiring software reads you",
 ];
 
@@ -18,9 +19,12 @@ export function AuthLayout({ children, heading }: { children: React.ReactNode; h
         <Link href="/templates" aria-label={`${site.name} templates`}>
           <VeroLogo />
         </Link>
+        <div className="flex justify-center py-6">
+          <ResumeFolder />
+        </div>
         <div className="max-w-md">
           <h2 className="font-display text-3xl leading-tight tracking-tight">{site.tagline}</h2>
-          <ul className="mt-8 space-y-4">
+          <ul className="mt-6 space-y-3">
             {POINTS.map((point) => (
               <li key={point} className="flex gap-3 text-sm text-muted-foreground">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />

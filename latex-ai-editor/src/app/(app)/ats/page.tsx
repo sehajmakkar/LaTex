@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, Page, PageHeader } from "@/components/shell/Page";
 import { useUsage } from "@/hooks/use-usage";
+import { ScanProgress } from "@/components/shared/ScanProgress";
 import { cn } from "@/lib/utils";
 import { scoreTone } from "@/components/ats/score";
 
@@ -123,129 +124,140 @@ function AtsPage() {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section className="flex flex-col gap-6 rounded-2xl border bg-card p-5 md:p-6" aria-label="Run an ATS check">
-          <div>
-            <h2 className="mb-3 font-heading text-base font-semibold">1. Choose a resume</h2>
-            <Tabs value={tab} onValueChange={setTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="resume">One of my resumes</TabsTrigger>
-                <TabsTrigger value="upload">Upload a file</TabsTrigger>
-              </TabsList>
-              <TabsContent value="resume">
-                {projects === null ? (
-                  <Skeleton className="h-10 w-full rounded-lg" />
-                ) : projects.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No resumes yet.{" "}
-                    <Link href="/templates" className="text-foreground underline underline-offset-4">
-                      Start from a template
-                    </Link>{" "}
-                    or upload a file.
-                  </p>
-                ) : (
-                  <>
-                    <select
-                      value={projectId}
-                      onChange={(e) => setProjectId(e.target.value)}
-                      aria-label="Resume"
-                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
-                    >
-                      <option value="">Choose a resume…</option>
-                      {projects.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-2 text-xs text-muted-foreground">We compile it to PDF and check that file, exactly what an employer receives.</p>
-                  </>
-                )}
-              </TabsContent>
-              <TabsContent value="upload">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.txt"
-                  className="hidden"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragging(true);
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragging(false);
-                    const dropped = e.dataTransfer.files?.[0];
-                    if (dropped) setFile(dropped);
-                  }}
-                  className={cn(
-                    "flex w-full flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-8 text-center transition-colors hover:border-ring/60",
-                    dragging && "border-ring bg-accent/40"
-                  )}
-                >
-                  <FileUp className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{file ? file.name : "Drop your resume here, or click to choose"}</span>
-                  <span className="text-xs text-muted-foreground">PDF, DOCX or TXT · up to 5 MB</span>
-                </button>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          <div>
-            <h2 className="mb-1 flex items-center gap-2 font-heading text-base font-semibold">
-              2. Target a job <span className="text-xs font-normal text-muted-foreground">(recommended)</span>
-            </h2>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Paste the job description to get a job match score and the keywords you&apos;re missing.
-            </p>
-            <textarea
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              maxLength={10_000}
-              placeholder="Paste the job description…"
-              className="h-36 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+          {busy ? (
+            <ScanProgress
+              title="Checking your resume…"
+              steps={STEPS[tab === "resume" ? "project" : "upload"]}
+              active={step ?? 0}
+              note="Keep this page open; your report opens when it's ready."
             />
-            {!jobDescription.trim() && (
-              <label className="mt-3 flex items-center gap-2 text-sm">
-                <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <input
-                  value={targetRole}
-                  onChange={(e) => setTargetRole(e.target.value)}
-                  maxLength={120}
-                  placeholder="…or just a target role, e.g. Backend Engineer"
-                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
-                />
-              </label>
-            )}
-          </div>
+          ) : (
+            <>
+              <div>
+                <h2 className="mb-3 font-heading text-base font-semibold">1. Choose a resume</h2>
+                <Tabs value={tab} onValueChange={setTab}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="resume">One of my resumes</TabsTrigger>
+                    <TabsTrigger value="upload">Upload a file</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="resume">
+                    {projects === null ? (
+                      <Skeleton className="h-10 w-full rounded-lg" />
+                    ) : projects.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No resumes yet.{" "}
+                        <Link href="/templates" className="text-foreground underline underline-offset-4">
+                          Start from a template
+                        </Link>{" "}
+                        or upload a file.
+                      </p>
+                    ) : (
+                      <>
+                        <select
+                          value={projectId}
+                          onChange={(e) => setProjectId(e.target.value)}
+                          aria-label="Resume"
+                          className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+                        >
+                          <option value="">Choose a resume…</option>
+                          {projects.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-2 text-xs text-muted-foreground">We compile it to PDF and check that file, exactly what an employer receives.</p>
+                      </>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="upload">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      className="hidden"
+                      onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragging(true);
+                      }}
+                      onDragLeave={() => setDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragging(false);
+                        const dropped = e.dataTransfer.files?.[0];
+                        if (dropped) setFile(dropped);
+                      }}
+                      className={cn(
+                        "flex w-full flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-8 text-center transition-colors hover:border-ring/60",
+                        dragging && "border-ring bg-accent/40"
+                      )}
+                    >
+                      <FileUp className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm font-medium">{file ? file.name : "Drop your resume here, or click to choose"}</span>
+                      <span className="text-xs text-muted-foreground">PDF, DOCX or TXT · up to 5 MB</span>
+                    </button>
+                  </TabsContent>
+                </Tabs>
+              </div>
 
-          <div>
-            <Button className="w-full" onClick={run} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
-              {busy ? STEPS[tab === "resume" ? "project" : "upload"][step ?? 0] : "Run ATS check"}
-            </Button>
-            {aiLeft !== null && (
-              <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5" />
-                {aiLeft > 0 ? (
-                  <>
-                    AI review included · {aiLeft} of {usage!.limits.atsAiReviewsPerMonth} left this month
-                  </>
-                ) : (
-                  <>
-                    AI reviews used up this month; you&apos;ll get the rule-based check.{" "}
-                    <Link href="/billing" className="text-foreground underline underline-offset-4">
-                      Upgrade
-                    </Link>
-                  </>
+              <div>
+                <h2 className="mb-1 flex items-center gap-2 font-heading text-base font-semibold">
+                  2. Target a job <span className="text-xs font-normal text-muted-foreground">(recommended)</span>
+                </h2>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Paste the job description to get a job match score and the keywords you&apos;re missing.
+                </p>
+                <textarea
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  maxLength={10_000}
+                  placeholder="Paste the job description…"
+                  className="h-36 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+                />
+                {!jobDescription.trim() && (
+                  <label className="mt-3 flex items-center gap-2 text-sm">
+                    <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input
+                      value={targetRole}
+                      onChange={(e) => setTargetRole(e.target.value)}
+                      maxLength={120}
+                      placeholder="…or just a target role, e.g. Backend Engineer"
+                      className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+                    />
+                  </label>
                 )}
-              </p>
-            )}
-          </div>
+              </div>
+
+              <div>
+                <Button className="w-full" onClick={run} disabled={busy}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
+                  {busy ? STEPS[tab === "resume" ? "project" : "upload"][step ?? 0] : "Run ATS check"}
+                </Button>
+                {aiLeft !== null && (
+                  <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {aiLeft > 0 ? (
+                      <>
+                        AI review included · {aiLeft} of {usage!.limits.atsAiReviewsPerMonth} left this month
+                      </>
+                    ) : (
+                      <>
+                        AI reviews used up this month; you&apos;ll get the rule-based check.{" "}
+                        <Link href="/billing" className="text-foreground underline underline-offset-4">
+                          Upgrade
+                        </Link>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </section>
 
         <section aria-labelledby="reports-heading">

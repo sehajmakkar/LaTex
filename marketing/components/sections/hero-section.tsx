@@ -48,8 +48,8 @@ export function HeroSection() {
         {/* Subheadline */}
         <p className="text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto mb-10 leading-relaxed text-balance">
           The AI-native writing workspace for resumes and technical documents.
-          LaTeX editor, inline AI editing, professional templates, and real-time
-          ATS scoring - all in one place.
+          Ask for changes like you would in ChatGPT, rewrite any line inline,
+          start from pro templates and check your ATS score, all in one place.
         </p>
 
         {/* CTAs */}

@@ -8,11 +8,11 @@ export function CtaSection() {
     <section className="px-6 py-24">
       <div className="max-w-3xl mx-auto text-center">
         <h2 className="font-display text-4xl md:text-5xl font-bold text-zinc-100 mb-6">
-          Ready to write a stronger resume?
+          Your next resume is one ask away.
         </h2>
         <p className="text-lg text-zinc-500 mb-10 text-balance">
-          Join thousands of job seekers and researchers already using Vero to
-          write, refine, and land faster.
+          Start from a template or bring the resume you have, then tell Vero
+          what to change. Free to start, no card needed.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href={appLinks.start}>

@@ -37,7 +37,7 @@ const LINE_HEIGHT = 19
 const MONO = `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace`
 const FONT = `500 ${FONT_SIZE}px ${MONO}`
 const HEAVY_FONT = `700 ${FONT_SIZE}px ${MONO}`
-const BASE_COLOR = "rgba(113, 113, 122, 0.22)" // zinc-500, dim
+const BASE_COLOR = "rgba(113, 113, 122, 0.2)" // zinc-500, dim
 
 /** Inked glyphs: zinc-500 through zinc-300 to white. */
 const LIT = ["#52525b", "#63636b", "#71717a", "#8a8a93", "#a1a1aa", "#babac1", "#d4d4d8", "#e4e4e7", "#f4f4f5", "#ffffff"]
@@ -95,17 +95,22 @@ export function LatexFluid({ clearRef, className }: Props) {
       const box = wrap.getBoundingClientRect()
       const r = clear.getBoundingClientRect()
       const cx = r.left - box.left + r.width / 2
+      const narrow = box.width < 640
       // A horseshoe: an elliptical hole anchored at the top edge, wide enough for the copy and
       // reaching just below the CTA. Everything outside it (both sides, top to bottom, and the band
       // under the CTA) shows the field; the ellipse's edge is feathered.
       // The clear core covers the copy plus a margin; the feather sits outside it.
-      const CORE = 0.82
-      const rx = (r.width / 2 + Math.min(90, box.width * 0.05)) / CORE
-      const ry = (r.bottom - box.top + 50) / CORE
+      // A wide feather (CORE → 100%) so the field fades in gradually rather than meeting the copy
+      // at an edge; the clear core is wider than the copy, which keeps the side arms narrow.
+      const CORE = 0.64
+      const rx = (r.width / 2 + Math.min(210, box.width * 0.13)) / CORE
+      const ry = (r.bottom - box.top + 40) / CORE
       const masks = [
         `radial-gradient(${rx}px ${ry}px at ${cx}px 0px, transparent ${CORE * 100}%, #000 100%)`,
         // soft top (behind the navbar) and bottom (into the next section) edges
-        `linear-gradient(to bottom, transparent 0px, #000 110px, #000 calc(100% - 90px), transparent 100%)`,
+        `linear-gradient(to bottom, transparent 0px, #000 170px, #000 calc(100% - 150px), transparent 100%)`,
+        // narrower arms: fade the outer edges too, so the field hugs the copy instead of the viewport
+        `linear-gradient(to right, transparent 0%, #000 ${narrow ? 0 : 14}%, #000 ${narrow ? 100 : 86}%, transparent 100%)`,
       ].join(", ")
       wrap.style.maskImage = masks
       wrap.style.webkitMaskImage = masks

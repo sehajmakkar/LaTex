@@ -1255,3 +1255,66 @@ Dodo Payments (merchant of record) reviews these pages during verification. Befo
 - [ ] Avatars: small, and they fan a little on hover. "+10" is readable.
 - [ ] The LaTeX field wraps the copy like a horseshoe, with nothing behind the headline, subheadline or buttons, and soft edges.
 - [ ] Both CTA buttons still work.
+
+---
+
+## Step: Landing-page content refresh and animated feature demos (29 Sep 2026)
+
+### Decisions (yours)
+- "Cursor for LaTeX" stays as the headline, with the "AI-native workspace" framing.
+- Resumes are what's live today. The platform grows to everything written in LaTeX (research papers, theses…).
+- Testimonials are left as they are.
+
+### What changed: marketing (`marketing/`)
+- **Hero subheadline:** "The AI-native workspace for everything LaTeX, starting with your resume. Ask for changes like you would in ChatGPT, edit any line inline, start from proven templates, and check how an ATS reads you."
+- **Features, rebuilt** as "An AI co-editor that speaks LaTeX". Six cards, each with a live demo that loops only while on screen, and a static finished state with reduced motion:
+  1. **Ask for any change:** the command bar types a request, the diff lands in red and green, "Review 2 changes", Keep all.
+  2. **Edit any line with ⌘K:** select a line, ⌘K prompt, the line rewrites with an `[X]` placeholder instead of a made-up number.
+  3. **Proven templates:** a folder that fans out Awesome CV, Jake's Resume and AltaCV on hover or tap (adapted from uselayouts folder-interaction).
+  4. **Free ATS check:** the scanning page plus a score ring and job keywords (adapted from uselayouts scan-document).
+  5. **Bring the resume you have:** Overleaf .zip, PDF and Word turning into LaTeX.
+  6. **Everything LaTeX, starting with resumes:** pills (Resumes, Research papers, Theses, Beamer…) under a draggable magnifier that drifts on its own (adapted from uselayouts magnified-bento).
+- **Company logos:** kept under the bento as aspiration ("Write the resume for the role you want, at companies like…"), greyscale, with a "not affiliated" note.
+- **ATS section:** the scanning page beside a checklist that ticks off in step with it.
+- **Closing CTA:** "Your next resume is one ask away." I removed "Join thousands of job seekers…", which wasn't true yet.
+- **FAQ:**
+  - "What is Vero?" now uses the new positioning.
+  - The command bar (⌘I) is added to "Do I need to know LaTeX?".
+  - New question: "Is Vero only for resumes?".
+  - Free vs Pro now lists AI commands.
+- **Code:**
+  - The components are restyled to the site's zinc palette, with lucide icons instead of the extra hugeicons library, so there are no new packages.
+  - New folders: `components/motion/` and `components/features/`.
+  - Three template previews are copied to `public/templates/`.
+
+### What changed: dashboard (`latex-ai-editor/`)
+- **ATS check:** while it runs, the form is replaced by the scanning page beside the steps (compiling → reading like an ATS → content and job match). It comes back unchanged if the check fails.
+- **Import:** the same view while an Overleaf, PDF or Word import runs (`src/components/shared/ScanProgress.tsx`, framer-motion). Ink scan bar in light mode, silver in dark.
+- **Sign-in/sign-up left panel:**
+  - A `resume.tex` folder (uselayouts confidential-folder, `src/components/ui/confidential-folder.tsx`). A real resume peeks out on hover, and clicking pulls it out and flips it to "Cursor for LaTeX / Write smarter, land faster".
+  - The points were rewritten for the command bar, templates/import and the ATS check.
+
+### Verified
+- Both projects typecheck. Dashboard tests pass (143/143), and the changed files lint clean.
+- Screenshots: marketing at 1440 and 390 px (no horizontal scroll); dashboard sign-in and the scan view in light and dark (via a temporary preview page, since deleted).
+- **Known, pre-existing:** `npm run lint` in the dashboard reports 8 errors in `latex-service/server.js` (CommonJS `require` in the separate compile service). This is unrelated to this change. The fix is to add `"latex-service/**"` to `globalIgnores` in `eslint.config.mjs`.
+
+### Test checklist (browser)
+- [ ] Marketing features: each demo animates as you scroll to it. The folder opens on hover (tap on phone), and the magnifier can be dragged.
+- [ ] ATS section: the page scans while the checklist ticks.
+- [ ] Dashboard → ATS check → Run: the scan view with steps shows, then the report opens.
+- [ ] Dashboard → Import a PDF: the scan view with the 4 steps shows.
+- [ ] Sign-in page: hover the folder (the resume peeks), click it (it flips to the tagline), click again (it slides back). Try both themes.
+
+### Revision (29 Sep, your feedback)
+- **Hero subheading:** back to the previous line, plus the command-bar idea: "The AI-native writing workspace for resumes and technical documents. Ask for changes like you would in ChatGPT, rewrite any line inline, start from pro templates and check your ATS score, all in one place."
+- **LaTeX fluid:** a wider, softer feather where it meets the copy, softer top and bottom edges, and the outer left and right edges fade out too, so the side arms are narrower.
+- **Bento: 4 cards.**
+  - Ask for any change: its code panel now has a fixed height, so the row no longer resizes while it animates (verified: the card stays at 386 px).
+  - ⌘K: back to the minimal ⌘ + K keycaps.
+  - Proven templates: unchanged.
+  - Import: .zip, .pdf and .docx merge into one .tex ("ready to edit"), with an **Import your resume →** link (`sign-up?intent=import`, which signed-in users skip straight past).
+  - Removed: the ATS card (the ATS section follows right after) and "Everything LaTeX".
+- **Company logos:** more space above them, full colour on hover, and no "not affiliated" line.
+- **ATS section:** the explanatory paragraph is removed.
+- The unused magnifier component is deleted.

@@ -15,7 +15,6 @@ import {
   FileCode2,
   FileText,
   FileUp,
-  Loader2,
   RotateCcw,
   Sparkles,
 } from "lucide-react";
@@ -26,6 +25,7 @@ import { DocxPreview } from "@/components/ats/DocxPreview";
 import { useUsage } from "@/hooks/use-usage";
 import type { ImportReport } from "@/services/import/types";
 import { cn } from "@/lib/utils";
+import { ScanProgress } from "@/components/shared/ScanProgress";
 
 type Result = { projectId: string; name: string; report: ImportReport; pdfUrl: string | null };
 type Stage = "pick" | "working" | "review";
@@ -38,28 +38,14 @@ const STEPS = {
   ai: ["Reading your resume", "Structuring sections, entries and bullets", "Checking every line against your file", "Building the LaTeX and compiling"],
 };
 
-function Steps({ steps }: { steps: string[] }) {
+/** Scanning page beside the import steps, advancing on a timer while the server works. */
+function Steps({ steps, title, note }: { steps: string[]; title: string; note: string }) {
   const [active, setActive] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setActive((a) => Math.min(a + 1, steps.length - 1)), 3500);
     return () => clearInterval(timer);
   }, [steps.length]);
-  return (
-    <ol className="space-y-3">
-      {steps.map((step, i) => (
-        <li key={step} className={cn("flex items-center gap-3 text-sm", i > active && "text-muted-foreground")}>
-          {i < active ? (
-            <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          ) : i === active ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <span className="h-4 w-4 rounded-full border" />
-          )}
-          {step}
-        </li>
-      ))}
-    </ol>
-  );
+  return <ScanProgress title={title} steps={steps} active={active} note={note} />;
 }
 
 function Original({ file, text }: { file: File | null; text: string }) {
@@ -306,9 +292,11 @@ export default function ImportPage() {
 
       {stage === "working" ? (
         <div className="rounded-2xl border bg-card p-6">
-          <p className="mb-4 font-medium">{method === "latex" ? "Importing your LaTeX project…" : "Rebuilding your resume in LaTeX…"}</p>
-          <Steps steps={STEPS[method]} />
-          <p className="mt-5 text-xs text-muted-foreground">{method === "ai" ? "This takes 10–30 seconds." : "This takes a few seconds."}</p>
+          <Steps
+            steps={STEPS[method]}
+            title={method === "latex" ? "Importing your LaTeX project…" : "Rebuilding your resume in LaTeX…"}
+            note={method === "ai" ? "This takes 10–30 seconds." : "This takes a few seconds."}
+          />
         </div>
       ) : (
         <div className="space-y-6">

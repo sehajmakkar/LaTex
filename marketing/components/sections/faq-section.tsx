@@ -3,11 +3,15 @@ import { pricing } from "@/lib/site"
 export const faqs = [
   {
     q: "What is Vero?",
-    a: "Vero is an AI-native resume builder built on LaTeX. You get professional templates, a live PDF preview, inline AI editing and a free ATS check in one workspace.",
+    a: "Vero is an AI-native workspace for LaTeX, like Cursor but for documents, starting with resumes. You write in real LaTeX with a live PDF preview, ask the AI for changes in plain English and review each one as a diff, start from proven templates, and check your resume against an ATS, all in one place.",
+  },
+  {
+    q: "Is Vero only for resumes?",
+    a: "For now, yes: everything in Vero today is built around resumes, from the templates to the ATS check. Research papers, theses and the rest of what people write in LaTeX are next.",
   },
   {
     q: "Do I need to know LaTeX?",
-    a: "No. Start from a template and edit the text you see, or select a line and press ⌘K to describe the change in plain English. If you do know LaTeX, the full source is yours to edit.",
+    a: "No. Start from a template and tell Vero what to change in the command bar (⌘I), like you would in ChatGPT, or select a line and press ⌘K to rewrite just that line. Every change shows up as a diff you keep or undo. If you do know LaTeX, the full source is yours to edit.",
   },
   {
     q: "Can I bring my resume from Overleaf, Word or a PDF?",
@@ -19,7 +23,7 @@ export const faqs = [
   },
   {
     q: "What's the difference between Free and Pro?",
-    a: `Free includes ${pricing.free.resumes} resumes, every template, ${pricing.free.aiEditsPerMonth} AI edits a month, the ATS check and PDF download. Pro (${pricing.pro.price}/month, tax included) adds unlimited resumes, ${pricing.pro.aiEditsPerMonth.toLocaleString("en-US")} AI edits a month and new AI features first.`,
+    a: `Free includes ${pricing.free.resumes} resumes, every template, ${pricing.free.aiEditsPerMonth} AI edits and ${pricing.free.aiCommandsPerMonth} AI commands a month, the ATS check and PDF download. Pro (${pricing.pro.price}/month, tax included) adds unlimited resumes, ${pricing.pro.aiEditsPerMonth.toLocaleString("en-US")} AI edits and ${pricing.pro.aiCommandsPerMonth} AI commands a month, and new AI features first.`,
   },
   {
     q: "Will the AI make things up on my resume?",
