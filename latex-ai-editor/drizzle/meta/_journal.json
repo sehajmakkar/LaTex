@@ -5,8 +5,22 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1771754790780,
-      "tag": "0000_overjoyed_wendell_vaughn",
+      "when": 1790567957354,
+      "tag": "0000_baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790568001718,
+      "tag": "0001_align_fk_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790568004305,
+      "tag": "0002_drop_stripe_columns",
       "breakpoints": true
     }
   ]

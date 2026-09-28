@@ -1,6 +1,6 @@
 {
-  "id": "bee8da9e-c19f-494c-b2e6-b3525f4d13ca",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "bf49fa92-d9a7-4e97-b356-79c86795eaab",
+  "prevId": "cd54cf87-0612-45c8-81eb-881ffa87df20",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -673,18 +673,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'free'"
-        },
-        "stripe_customer_id": {
-          "name": "stripe_customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stripe_subscription_id": {
-          "name": "stripe_subscription_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "dodo_customer_id": {
           "name": "dodo_customer_id",

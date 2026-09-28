@@ -352,7 +352,7 @@ Found in the audit: the webhook granted Pro for **any** product; never saved the
 - [x] **Manage subscription** button: Dodo customer portal session → cancel, update card, invoices. *Done 27 Sep (`/api/billing/portal`, Dodo customer portal).*
 - [x] `/billing/success`: poll `/api/billing/me` until the plan changes, because the webhook may arrive after the redirect. *Already polling `/api/usage` (now the effective plan).*
 - [ ] One source of truth for entitlements: `src/lib/plans.ts` *(created in 1.4 with the AI-edit limits; add projects/compiles/ATS/command-bar limits and point the pricing page at it)* with limits per plan (projects, compiles/day, AI edits/day, AI commands/day, ATS scans/day, features). Server routes and the pricing UI both read it.
-- [ ] Remove the Stripe columns (migration). Remove `pro_plus` from code (`billing-config.ts`, `dodo.ts`, checkout schema, billing page) and change the pricing page to Free vs Pro $5.99. *pro_plus: removed from checkout/UI; kept only as legacy mapping (old subscriptions = Pro). Stripe columns: confirmed empty in every row; drop in the Phase 6 baseline migration (needs your OK).*
+- [x] Remove the Stripe columns (migration). Remove `pro_plus` from code (`billing-config.ts`, `dodo.ts`, checkout schema, billing page) and change the pricing page to Free vs Pro $5.99. *pro_plus: removed from checkout/UI; kept only as legacy mapping (old subscriptions = Pro). Stripe columns: confirmed empty in every row; drop in the Phase 6 baseline migration (needs your OK).* *Done 28 Sep: migration `0002_drop_stripe_columns` (runs when you `npm run db:migrate` after deploying).*
 
 **Done when:** upgrade, renew, cancel, and fail all update `users.plan` correctly in test mode, and a Pro user sees Pro limits everywhere.
 
@@ -685,7 +685,7 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).
 - [ ] Make required env vars actually required in `env.ts` for production (e.g. `DATABASE_URL`, `CLERK_SECRET_KEY`, `GEMINI_API_KEY`), so a bad deploy fails at build time rather than at runtime.
 - [ ] Vercel project `vero-app`, custom domain `app.<domain>`, env vars, `vercel.json` durations (AI command ~60 s).
-- [ ] Run `db:migrate` against prod (use migrations, not `push`).
+- [ ] Run `db:migrate` against prod (use migrations, not `push`). *Ready 28 Sep: a fresh database is built by `npm run db:migrate` alone (baseline + follow-ups, tested on Postgres 17). See replenish-guide "Point 4".*
 - [ ] Observability: Sentry (free tier) for app and service errors, Vercel Analytics (already present), uptime check on `/health` and `/api/health` (Better Stack / UptimeRobot free).
 - [ ] Legal pages: Terms, Privacy (states that resumes are sent to Google Gemini and stored in Neon/R2), Refunds. Also a data-deletion path: deleting the Clerk user cascades to the DB and removes R2 files. *Data-deletion path: done (28 Sep, see replenish-guide "Point 3").*
 - [ ] Security pass: run `/security-review` on the branch, check the ownership checks on every `/api/*`, and add upload magic-byte checks.

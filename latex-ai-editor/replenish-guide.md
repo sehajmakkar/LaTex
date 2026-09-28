@@ -977,3 +977,47 @@ Test cards depend on the **billing country** Dodo detects (India shows ₹ + GST
 | 2 | | |
 | 3 | | |
 | 4 | | |
+
+---
+
+## Step: Point 4, database migration baseline (28 Sep 2026)
+
+### Why
+- The database was built with `drizzle-kit push` plus **7 hand-written SQL files**; the one real migration (Feb) covered 4 of today's 8 tables, and nothing was recorded as applied. A **fresh production database couldn't be created reliably**, and nobody could tell which changes a database had.
+- Hand-written SQL also left 2 indexes only in the database (not in `schema.ts`) and 4 foreign keys with different names than Drizzle expects, which would break future migrations.
+- The Stripe columns (empty in every row) were still in the schema.
+
+### What changed
+| Area | Change | Files |
+|---|---|---|
+| Baseline | `0000_baseline.sql`: the whole schema as it is today (8 tables, 2 indexes, 9 foreign keys) | `drizzle/0000_baseline.sql`, `drizzle/meta/*` |
+| Follow-ups | `0001_align_fk_names.sql` renames the 4 old `…_fkey` constraints only where they exist (no-op on a fresh DB); `0002_drop_stripe_columns.sql` | `drizzle/0001_*.sql`, `drizzle/0002_*.sql` |
+| Schema | The 2 indexes added to `schema.ts`; Stripe columns removed | `src/lib/db/schema.ts` |
+| Existing DBs | `npm run db:mark-baseline` (`--check` first) records the baseline as applied on a database that already has it; refuses on empty or unexpected databases | `scripts/db-mark-baseline.ts` |
+| Tooling | `drizzle.config.ts` reads `.env` itself; workflow documented there | `drizzle.config.ts`, `package.json` |
+| History | Old migration + the 7 manual SQL files moved to `drizzle/_archive/` (not applied) | |
+
+### What I already verified (scratch Postgres 17, same version as Neon)
+- **Baseline = reality:** the baseline built on an empty database matches a `pg_dump` of the real Neon schema, except the 4 foreign-key names (fixed by `0001`).
+- **Fresh database path (production):** `npm run db:migrate` builds everything; `drizzle-kit push` against it finds **no changes** (migrations = `schema.ts`).
+- **Existing database path (our Neon):** Neon's schema + sample data → mark baseline → migrate → only `0001` + `0002` ran, **data kept**, Stripe columns and old names gone, result **identical** to the fresh path, re-running does nothing.
+- On the **real Neon database I only recorded the baseline** (one bookkeeping row, no schema change). `drizzle-kit check` OK; tests 137/137; build OK.
+
+### Your steps (order matters)
+1. Commit and push. **Wait until the Vercel deployment of the dashboard has finished.** The old deployed code still reads the Stripe columns; dropping them first would break the live app.
+2. Then run, from `latex-ai-editor/`:
+   ```bash
+   npm run db:migrate
+   ```
+   It applies `0001` and `0002` to Neon (renames 4 constraints, drops the 2 empty Stripe columns).
+3. Open the dashboard: sign in, open a resume, `/billing`. Everything should work as before.
+
+**From now on:** change `src/lib/db/schema.ts` → `npm run db:generate` → read the SQL it wrote in `drizzle/` → `npm run db:migrate`. Don't use `db:push` on the shared database or production.
+
+**Production (Phase 6):** on the new empty database, just `npm run db:migrate` (no baseline marking).
+
+### Results (fill in)
+| # | Check | Result |
+|---|---|---|
+| 1 | `npm run db:migrate` after the deploy | |
+| 2 | Dashboard, resume, billing still work | |

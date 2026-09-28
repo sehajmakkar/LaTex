@@ -1,14 +1,10 @@
-import { boolean, pgTable, uuid, text, timestamp, integer, date } from "drizzle-orm/pg-core";
+import { boolean, pgTable, uuid, text, timestamp, integer, date, index } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
   name: text("name"),
   plan: text("plan").notNull().default("free"),
-  /** Deprecated (Stripe was replaced by Dodo). Empty in every row; drop in the Phase 6 baseline migration. */
-  stripeCustomerId: text("stripe_customer_id"),
-  /** Deprecated, see stripeCustomerId. */
-  stripeSubscriptionId: text("stripe_subscription_id"),
   dodoCustomerId: text("dodo_customer_id"),
   dodoSubscriptionId: text("dodo_subscription_id"),
   /** Dodo's subscription status: pending | active | on_hold | cancelled | failed | expired. */
@@ -112,7 +108,7 @@ export const aiMessages = pgTable("ai_messages", {
   edits: text("edits"), // JSON of proposed edits (assistant only)
   status: text("status"), // "pending" | "accepted" | "partial" | "rejected" (assistant only)
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [index("ai_messages_project_created_idx").on(t.projectId, t.createdAt)]);
 
 /** Snapshots of a project's source, taken before AI changes are applied (Phase 5). */
 export const projectVersions = pgTable("project_versions", {
@@ -126,7 +122,7 @@ export const projectVersions = pgTable("project_versions", {
   content: text("content").notNull(),
   label: text("label").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [index("project_versions_project_created_idx").on(t.projectId, t.createdAt)]);
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
