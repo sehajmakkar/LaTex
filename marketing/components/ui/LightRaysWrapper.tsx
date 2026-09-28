@@ -6,7 +6,7 @@ export default function LightRaysWrapper() {
   return (
     <LightRays
       raysOrigin="top-center"
-      raysColor="#ffffff"
+      raysColor="#F8F8F8"
       raysSpeed={1}
       lightSpread={0.5}
       rayLength={2}

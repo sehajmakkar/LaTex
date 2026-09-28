@@ -1188,3 +1188,44 @@ Dodo Payments (merchant of record) reviews these pages during verification. Befo
 - [ ] Footer: every link goes somewhere real. Contact opens an email to your address, and X and LinkedIn open your profiles.
 - [ ] From `/terms`, clicking **Pricing** in the navbar goes to the pricing section on the home page.
 - [ ] Dashboard sign-up shows the Terms/Privacy line, and Billing shows the refund note under Upgrade.
+
+---
+
+## Step: Hero rework, LaTeX ink effect (29 Sep 2026)
+
+### What changed (in `marketing/`)
+- **Removed:** the "Trusted by 10,000+" row and the avatar hover stack from the hero, since those numbers aren't real yet.
+- **Added:** `components/ui/latex-fluid.tsx`, a quiet field of LaTeX special characters that the pointer stirs like ink.
+  - **The field:** mostly single special characters (`\ { } [ ] $ & % # ^ _ ~`), with the occasional short command (`\begin`, `\end`, `\item`, `\frac`, `\section`…) and no resume text.
+  - **The ink (soft, like the reference fluid):**
+    - Moving the pointer pushes velocity and ink into a small fluid field. The ink drifts with the motion, spreads and fades within about a second.
+    - Where there's ink, glyphs brighten from zinc grey through silver to white and drift with the flow.
+    - Only the densest ink blooms into heavier LaTeX glyphs, over a faint silver glow.
+    - Colours stay in the site's grey/silver/white range: no purple.
+    - When nobody's stirring, a slow, soft stroke drifts through now and then.
+  - **The shape:** a feathered U around the hero copy, masked from the copy's real position.
+    - Clear over the headline and subheadline.
+    - Rising up both sides and fully visible just below the CTA.
+    - Fading out at the bottom.
+    - On screens under 640 px it only starts below the CTA.
+  - **Cost:**
+    - The dim field is drawn once, and each frame repaints only the inked cells.
+    - The loop stops when the hero is off-screen, and "reduce motion" shows the static field only.
+    - About 7% of the main thread while the pointer moves.
+  - **Clicks:** the canvas ignores pointer events, so the CTA buttons stay clickable (checked).
+
+### Tuning knobs (top of `latex-fluid.tsx`)
+- `BASE_COLOR`: how visible the resting field is.
+- `LIT`: grey-to-white ramp.
+- `RAMP`: bloom glyphs.
+- `SPECIALS` / `COMMANDS`: what the field is made of.
+- `INK_DECAY` / `VELOCITY_DECAY`: how long the trail lasts.
+- `RADIUS`: brush size.
+- In `onMove`, `amount`: how much ink a stroke leaves.
+
+### Test checklist (browser, http://localhost:3001)
+- [ ] At rest: dim LaTeX characters on both sides of the copy and across the bottom, nothing over the headline, soft edges, no hard rectangle.
+- [ ] Move the pointer through the bottom band: a soft silver trail where glyphs brighten and drift, fading smoothly, with no hard rings and no purple.
+- [ ] "Start Writing Free" and "See how it works" still work.
+- [ ] Phone width: the effect sits below the buttons.
+- [ ] With Reduce motion on: static field, no animation.
