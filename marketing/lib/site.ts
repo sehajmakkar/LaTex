@@ -47,6 +47,15 @@ export const appLinks = {
 }
 
 export const pricing = {
-  free: { resumes: 3, aiEditsPerMonth: 40, aiCommandsPerMonth: 10 },
-  pro: { price: "$5.99", aiEditsPerMonth: 1000, aiCommandsPerMonth: 120 },
+  free: { resumes: 3, aiEditsPerMonth: 40, aiCommandsPerMonth: 10, atsAiReviewsPerMonth: 5 },
+  pro: {
+    price: "$4.99",
+    /** Regular price, shown struck through while the launch price runs. */
+    listPrice: "$7.99",
+    aiEditsPerMonth: 1000,
+    aiCommandsPerMonth: 120,
+    atsAiReviewsPerMonth: 60,
+    aiImportsPerMonth: 50,
+    versionsKept: 100,
+  },
 }

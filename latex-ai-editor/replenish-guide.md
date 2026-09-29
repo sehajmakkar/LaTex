@@ -1331,3 +1331,19 @@ Dodo Payments (merchant of record) reviews these pages during verification. Befo
 ### Your steps
 - In the Vercel marketing project, check that **Analytics** and **Speed Insights** are both enabled. Both only collect on deployed builds, not on localhost.
 - After deploying, open www.withvero.app. In the Network tab, requests to `/_vercel/insights/script.js` and `/_vercel/speed-insights/script.js` should load, and visits should show in the Analytics tab within a few minutes.
+
+---
+
+## Step: Pro at $4.99 launch price, and new plan cards (29 Sep 2026)
+
+### What changed
+- **Price:** Pro is **$4.99/month** (you changed the live Dodo product). On the marketing pricing cards and the dashboard Billing page it shows as a **"Launch price"** badge, with **$7.99** struck through next to **$4.99**.
+- **Copy:** Free and Pro now list real benefits instead of "Cancel anytime". Every claim matches `src/lib/plans.ts`:
+  - **Free:** 3 resumes from 14 templates, live PDF and unlimited downloads, the free ATS check, 40 AI line rewrites and 10 chat edits, and import from Overleaf, PDF or Word.
+  - **Pro:** unlimited resumes; 1,000 rewrites (25× Free) and 120 chat edits; 60 AI resume reviews with fix prompts; 50 PDF/Word rebuilds; 100-version history; new AI features first.
+- **Where it lives:** the prices are in `marketing/lib/site.ts` (`pricing.pro.price` and `listPrice`) and in `PRO_PRICE` and `PRO_LIST_PRICE` in the dashboard Billing page. The FAQ, Terms and Refund pages read the marketing value.
+
+### Your steps
+- Redeploy **both** Vercel projects.
+- Check that the Dodo checkout shows **$4.99**, and that the pricing cards match it.
+- **The struck-through $7.99 must be a real price.** Only show it if you'll actually charge $7.99 to new subscribers after the launch period. When you do, keep launch subscribers on $4.99.

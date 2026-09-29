@@ -46,3 +46,6 @@ next-env.d.ts
 
 # launch video renders (large)
 brag-output/
+
+# clerk configuration (can include secrets)
+/.clerk/

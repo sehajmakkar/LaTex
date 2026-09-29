@@ -60,7 +60,7 @@ export async function cancelAllLiveDodoSubscriptions(ref: AccountRef): Promise<s
   return live.map((s) => s.subscriptionId);
 }
 
-/** The product new subscriptions are created for (Pro, $5.99/month). */
+/** The product new subscriptions are created for (Pro, $4.99/month launch price). */
 export function proProductId(): string | null {
   return env.DODO_PRODUCT_ID_PRO ?? null;
 }

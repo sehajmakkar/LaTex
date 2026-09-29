@@ -683,6 +683,8 @@ Overleaf users copy a resume per job all the time, so Vero has the same **Make a
 
 ### Phase 6: Production launch (≈3–4 days)
 
+> **Go-live runbook:** `GO_LIVE.md` (29 Sep 2026) covers the Vercel plan and `NODE_ENV`, separating dev and prod databases, resetting test data, the Clerk production instance (DNS, own Google OAuth), Dodo live mode, the Gemini paid tier, and a production smoke test with a real-card payment and refund.
+
 - [ ] Environments: Neon `prod` branch (or a new DB), Clerk **prod**, Dodo **live**, R2 prod bucket, compile service prod secret. Keep `.env.example` in sync with `env.ts`, including the `GEMINI_API_KEY` and `GEMINI_MODEL` names (it currently says `OPENAI_API_KEY`).
 - [x] Make required env vars actually required in `env.ts` for production (e.g. `DATABASE_URL`, `CLERK_SECRET_KEY`, `GEMINI_API_KEY`), so a bad deploy fails at build time rather than at runtime. *Done 28 Sep in `next.config.ts`: core vars fail a production build, feature vars warn (promote at launch).*
 - [ ] Vercel project `vero-app`, custom domain `app.<domain>`, env vars, `vercel.json` durations (AI command ~60 s).
@@ -798,15 +800,16 @@ Based on Overleaf, Rezi, Teal, Jobscan, Enhancv, FlowCV, and Kickresume:
 
 ### Revenue per Pro user
 
-$5.99, tax included. Minus tax (0–20% depending on country, roughly $0.55 on average) and the Dodo Merchant-of-Record fee (roughly 4–5% + $0.40, so about $0.70), that leaves **about $4.70 net per Pro user per month**.
-Fixed costs: Vercel Pro $20 + Railway about $5–10 + domain, so **about $30/mo, and ~7 Pro users cover them**.
+**Launch price $4.99** (from 29 Sep 2026; shown against a $7.99 regular price, struck through). Tax included. Minus tax (roughly $0.46 on average) and the Dodo Merchant-of-Record fee (roughly 4–5% + $0.40, so about $0.62), that leaves **about $3.90 net per Pro user per month**. At the earlier $5.99 it was about $4.70.
+Fixed costs: Vercel Pro $20 + Railway about $5–10 + domain, so **about $30/mo, and ~10 Pro users cover them** (about 20 once free users' AI costs are counted, at ~30 free users per Pro user).
+A Pro user at every cap now costs more than their net (about $5.50 vs $3.90 at 2027 Gemini prices). Typical users cost $0.60–1.10. If heavy users show up, trim Pro to 80 command-bar requests and 40 AI ATS reviews a month (worst case ≈ $4.00).
 
 Rule of thumb: a Pro user who hits **every** cap still costs less than the net revenue, and a free user at the caps costs under ~$0.40/month. Because resume work is bursty (one intense session, then weeks of nothing), limits are **monthly**, with a small daily/minute burst guard against scripts. Daily limits would frustrate someone in the middle of a session.
 
 ### Limits
 
 
-|                                        | Free                                                                       | Pro ($5.99/mo)                      |
+|                                        | Free                                                                       | Pro ($4.99/mo launch, $7.99 regular) |
 | -------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------- |
 | Resumes / projects                     | **3**                                                                      | Unlimited (soft cap 100)            |
 | Compiles                               | 300/month, burst 20/min                                                    | Unlimited (fair use), burst 30/min  |

@@ -14,7 +14,9 @@ import { useUsage } from "@/hooks/use-usage";
 import { cn } from "@/lib/utils";
 import { site } from "@/lib/site";
 
-const PRO_PRICE = "$5.99";
+const PRO_PRICE = "$4.99";
+/** Regular price, shown struck through while the launch price runs. */
+const PRO_LIST_PRICE = "$7.99";
 
 type BillingMe = {
   plan: "free" | "pro";
@@ -39,6 +41,23 @@ function statusLine(b: BillingMe): { text: string; tone: "ok" | "warn" } {
       return { text: "", tone: "ok" };
   }
 }
+
+const FREE_BENEFITS = [
+  `${PLANS.free.projects} LaTeX resumes from 14 proven templates`,
+  "Live PDF preview and unlimited downloads",
+  "Free ATS check: see what hiring software reads",
+  `${PLANS.free.aiEditsPerMonth} AI line rewrites and ${PLANS.free.aiCommandsPerMonth} chat edits a month`,
+  "Import from Overleaf, PDF or Word",
+];
+
+const PRO_BENEFITS = [
+  "Unlimited resumes, one tailored to every job",
+  `${PLANS.pro.aiEditsPerMonth.toLocaleString("en-US")} AI line rewrites (25× Free) and ${PLANS.pro.aiCommandsPerMonth} chat edits a month`,
+  `${PLANS.pro.atsAiReviewsPerMonth} AI resume reviews, with a fix prompt for every weak bullet`,
+  `Rebuild ${PLANS.pro.aiImportsPerMonth} PDF or Word resumes a month in LaTeX`,
+  `Full version history: undo any AI change, ${PLANS.pro.versionsKept} versions deep`,
+  "New AI features before anyone else",
+];
 
 type Row = { label: string; free: string | boolean; pro: string | boolean };
 
@@ -129,14 +148,14 @@ export default function BillingPage() {
             <h2 className="font-heading text-lg font-semibold">Free</h2>
             {!isLoading && !isPro && <span className="rounded-full border px-2.5 py-0.5 text-xs">Current plan</span>}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Build and check a resume properly, for free.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Everything you need to build a resume that gets read.</p>
           <p className="mt-6 font-display text-4xl">
             $0<span className="ml-1 text-sm font-normal text-muted-foreground">forever</span>
           </p>
           <ul className="mt-6 flex-1 space-y-2.5 text-sm">
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.free.projects} resumes, every template</li>
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.free.aiEditsPerMonth} AI edits and {PLANS.free.aiCommandsPerMonth} AI commands a month</li>
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />ATS check and PDF download</li>
+            {FREE_BENEFITS.map((b) => (
+              <li key={b} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{b}</li>
+            ))}
           </ul>
           <Button variant="outline" className="mt-6" asChild={!isPro} disabled={isPro}>
             {isPro ? <span>Included with Pro</span> : <Link href="/dashboard">Go to your resumes</Link>}
@@ -155,15 +174,19 @@ export default function BillingPage() {
               <span className="rounded-full border px-2.5 py-0.5 text-xs">Most popular</span>
             )}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">For an active job search: unlimited resumes and far more AI.</p>
-          <p className="mt-6 font-display text-4xl">
-            {PRO_PRICE}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">/ month, tax included</span>
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">For an active job search: a tailored resume for every application.</p>
+          <div className="mt-6">
+            {/* <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-background">Launch price</span> */}
+            <p className="mt-2 flex items-baseline gap-2 font-display text-4xl">
+              <span className="text-2xl text-muted-foreground line-through decoration-2">{PRO_LIST_PRICE}</span>
+              {PRO_PRICE}
+              <span className="text-sm font-normal font-sans text-muted-foreground">/ month, tax included</span>
+            </p>
+          </div>
           <ul className="mt-6 flex-1 space-y-2.5 text-sm">
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />Unlimited resumes</li>
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{PLANS.pro.aiEditsPerMonth.toLocaleString()} AI edits and {PLANS.pro.aiCommandsPerMonth} AI commands a month</li>
-            <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />Longer version history, new AI features first</li>
+            {PRO_BENEFITS.map((b) => (
+              <li key={b} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" />{b}</li>
+            ))}
           </ul>
           {isLoading ? (
             <Skeleton className="mt-6 h-9 rounded-full" />
