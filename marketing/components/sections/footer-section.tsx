@@ -38,6 +38,24 @@ export function FooterSection() {
               The AI-native writing workspace for LaTeX, resumes, and technical
               documents.
             </p>
+            {/* Launch-platform badge (also a backlink they ask for) */}
+            <a
+              href="https://codehype.ai/product/vero?utm_source=codehype_badge"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-block opacity-80 transition-opacity hover:opacity-100"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- external badge SVG, sized by its host */}
+              <img
+                src="https://codehype.ai/badges/vero.svg?variant=find-us&v=20"
+                alt="Featured on CodeHype"
+                width={180}
+                height={65}
+                loading="lazy"
+                decoding="async"
+                style={{ display: "inline-block", border: 0, width: "100%", maxWidth: 180, height: "auto", maxHeight: 65 }}
+              />
+            </a>
           </div>
 
           {/* Product Links */}
