@@ -1318,3 +1318,16 @@ Dodo Payments (merchant of record) reviews these pages during verification. Befo
 - **Company logos:** more space above them, full colour on hover, and no "not affiliated" line.
 - **ATS section:** the explanatory paragraph is removed.
 - The unused magnifier component is deleted.
+
+---
+
+## Step: Vercel Analytics + Speed Insights on the marketing site (29 Sep 2026)
+
+### What changed (in `marketing/`)
+- `<Analytics />` was already in `app/layout.tsx`, but on an old pinned version (1.3.1). It's upgraded to `@vercel/analytics` ^2.0.1, matching the dashboard.
+- Added `@vercel/speed-insights` ^2.0.0 and `<SpeedInsights />` next to it, as the dashboard has.
+- Typecheck and `npm run build` pass.
+
+### Your steps
+- In the Vercel marketing project, check that **Analytics** and **Speed Insights** are both enabled. Both only collect on deployed builds, not on localhost.
+- After deploying, open www.withvero.app. In the Network tab, requests to `/_vercel/insights/script.js` and `/_vercel/speed-insights/script.js` should load, and visits should show in the Analytics tab within a few minutes.

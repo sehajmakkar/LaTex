@@ -2,6 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { LenisProvider } from "@/components/providers/lenis-provider";
 import { SITE_URL, pricing, site } from "@/lib/site";
 import "./globals.css";
@@ -74,6 +75,7 @@ export default function RootLayout({
       >
         <LenisProvider>{children}</LenisProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
