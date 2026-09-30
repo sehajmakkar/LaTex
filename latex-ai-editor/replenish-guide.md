@@ -1347,3 +1347,38 @@ Dodo Payments (merchant of record) reviews these pages during verification. Befo
 - Redeploy **both** Vercel projects.
 - Check that the Dodo checkout shows **$4.99**, and that the pricing cards match it.
 - **The struck-through $7.99 must be a real price.** Only show it if you'll actually charge $7.99 to new subscribers after the launch period. When you do, keep launch subscribers on $4.99.
+
+---
+
+## Step: CodeHype badge in the marketing footer (29 Sep 2026)
+
+### What changed (in `marketing/`)
+- `components/sections/footer-section.tsx`: the CodeHype "Find us on" badge sits under the brand tagline and links to `codehype.ai/product/vero`. It opens in a new tab, loads lazily, and is capped at 180 px wide.
+
+### Your steps
+- Redeploy the marketing project. Check that the badge shows in the footer on desktop and on mobile, and that clicking it opens your CodeHype page.
+- CodeHype may check for the badge before listing or ranking you, so keep it up at least through launch week.
+
+### Launch plan
+- The full three-week marketing plan (timeline, copy for Product Hunt, HN, X and Reddit, and a verdict on every directory) is at https://claude.ai/artifact/VgKok8gLeAWBrJGRkYkcsM
+
+---
+
+## Step: 9:16 launch reel with the female voice-over (29 Sep 2026)
+
+### What changed (in `brag-output/reel/`)
+- **`vero-reel.mp4`**: the launch video re-laid out for 1080×1920 (Reels, TikTok, Shorts, and X on mobile). It's 48.4 s: the same story, music and timing as `brag.mp4`, plus a full voice-over in the **Zephyr** (female) voice and word-by-word captions.
+- **The script:**
+  - The three teaser lines are reused as they were.
+  - Nine new lines cover the rest: the diff, ⌘K, the ATS check, Overleaf import, templates, and "Write smarter. Land faster."
+  - It ends on "Try it free at withvero.app".
+- **Layout:** content sits between y 130 and 1310 and captions at about y 1340, so the Reels/TikTok buttons and caption area at the bottom don't cover anything important.
+- **`vero-reel.jpg`**: the poster (the `\Vero` logo with the "Cursor for LaTeX" pill). It's also baked in as frame 0, so thumbnails show it.
+- **`share-copy.txt`**: the X post (under 280 characters) and a Reels/TikTok caption with hashtags.
+- **Rebuilding:** everything is in `reel/work/`. `python3 patch.py && node build.mjs && node make.mjs all` rebuilds it. `patch.py` derives the vertical layout from the landscape `work2/composition.src.html`, so fixes to the landscape scenes carry over.
+
+### Your steps
+- Watch it on your phone first: check that the captions are readable and the voice sits clearly over the music.
+- **Music licence:** it's still the inspiration video's track, as in the landscape cut. Instagram, TikTok and X can mute or block it. Swap it for a licensed track, or add sound from the platform's own library when you post.
+- **Posting on Instagram:** upload as a Reel and choose the cover from frame 0.
+- **Posting on X:** upload the MP4 directly (not a YouTube link) so it autoplays.
