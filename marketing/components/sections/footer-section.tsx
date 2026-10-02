@@ -3,6 +3,35 @@ import { Twitter, Linkedin } from "lucide-react";
 import { VeroWordmark } from "@/components/brand/vero-logo";
 import { CONTACT_EMAIL, appLinks, legal } from "@/lib/site";
 
+export function UsefulShelfBadge() {
+  return (
+    <a
+      href="https://usefulshelf.co/?utm_source=withvero.app&amp;utm_medium=referral&amp;utm_campaign=badge&amp;utm_content=light"
+      target="_blank"
+      rel="noopener"
+      className="inline-block opacity-80 transition-opacity hover:opacity-100"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- external badge SVG, sized by its host */}
+      <img
+        src="https://usefulshelf.co/badge/usefulshelf.svg"
+        alt="Featured on UsefulShelf"
+        width={220}
+        height={59}
+        loading="lazy"
+        decoding="async"
+        style={{
+          display: "inline-block",
+          border: 0,
+          width: "100%",
+          maxWidth: 220,
+          height: "auto",
+          maxHeight: 59,
+        }}
+      />
+    </a>
+  );
+}
+
 const footerLinks = {
   product: [
     { label: "Features", href: "/#features" },
@@ -31,7 +60,11 @@ export function FooterSection() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" aria-label="Vero home" className="inline-flex text-zinc-100">
+            <Link
+              href="/"
+              aria-label="Vero home"
+              className="inline-flex text-zinc-100"
+            >
               <VeroWordmark height={22} />
             </Link>
             <p className="mt-4 text-sm text-zinc-500 max-w-xs">
@@ -49,13 +82,23 @@ export function FooterSection() {
               <img
                 src="https://codehype.ai/badges/vero.svg?variant=find-us&v=20"
                 alt="Featured on CodeHype"
-                width={180}
-                height={65}
+                width={160}
+                height={58}
                 loading="lazy"
                 decoding="async"
-                style={{ display: "inline-block", border: 0, width: "100%", maxWidth: 180, height: "auto", maxHeight: 65 }}
+                style={{
+                  display: "inline-block",
+                  border: 0,
+                  width: "100%",
+                  maxWidth: 160,
+                  height: "auto",
+                  maxHeight: 58,
+                }}
               />
             </a>
+            <div className="mt-3">
+              <UsefulShelfBadge />
+            </div>
           </div>
 
           {/* Product Links */}
